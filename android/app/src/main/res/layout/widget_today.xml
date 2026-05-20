@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="6dp">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Today"
+            android:textColor="@color/widget_text"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/widget_inventory"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/widget_accent"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Breakfast -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@drawable/widget_slot_bg"
+        android:orientation="horizontal"
+        android:padding="7dp"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="3dp">
+        <TextView
+            android:layout_width="52dp"
+            android:layout_height="wrap_content"
+            android:text="Breakfast"
+            android:textColor="@color/widget_text_sec"
+            android:textSize="9sp"
+            android:textAllCaps="true" />
+        <TextView
+            android:id="@+id/meal_breakfast"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/widget_text"
+            android:textSize="10sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <TextView
+            android:id="@+id/btn_eaten_breakfast"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:gravity="center"
+            android:textColor="@color/widget_accent"
+            android:textSize="14sp"
+            android:text="○" />
+    </LinearLayout>
+
+    <!-- Lunch -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@drawable/widget_slot_bg"
+        android:orientation="horizontal"
+        android:padding="7dp"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="3dp">
+        <TextView
+            android:layout_width="52dp"
+            android:layout_height="wrap_content"
+            android:text="Lunch"
+            android:textColor="@color/widget_text_sec"
+            android:textSize="9sp"
+            android:textAllCaps="true" />
+        <TextView
+            android:id="@+id/meal_lunch"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/widget_text"
+            android:textSize="10sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <TextView
+            android:id="@+id/btn_eaten_lunch"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:gravity="center"
+            android:textColor="@color/widget_accent"
+            android:textSize="14sp"
+            android:text="○" />
+    </LinearLayout>
+
+    <!-- Snack -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@drawable/widget_slot_bg"
+        android:orientation="horizontal"
+        android:padding="7dp"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="3dp">
+        <TextView
+            android:layout_width="52dp"
+            android:layout_height="wrap_content"
+            android:text="Snack"
+            android:textColor="@color/widget_text_sec"
+            android:textSize="9sp"
+            android:textAllCaps="true" />
+        <TextView
+            android:id="@+id/meal_snack"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/widget_text"
+            android:textSize="10sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <TextView
+            android:id="@+id/btn_eaten_snack"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:gravity="center"
+            android:textColor="@color/widget_accent"
+            android:textSize="14sp"
+            android:text="○" />
+    </LinearLayout>
+
+    <!-- Dinner -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@drawable/widget_slot_bg"
+        android:orientation="horizontal"
+        android:padding="7dp"
+        android:gravity="center_vertical">
+        <TextView
+            android:layout_width="52dp"
+            android:layout_height="wrap_content"
+            android:text="Dinner"
+            android:textColor="@color/widget_text_sec"
+            android:textSize="9sp"
+            android:textAllCaps="true" />
+        <TextView
+            android:id="@+id/meal_dinner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/widget_text"
+            android:textSize="10sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <TextView
+            android:id="@+id/btn_eaten_dinner"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:gravity="center"
+            android:textColor="@color/widget_accent"
+            android:textSize="14sp"
+            android:text="○" />
+    </LinearLayout>
+
+</LinearLayout>

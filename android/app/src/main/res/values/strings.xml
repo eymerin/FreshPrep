@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FreshPrep</string>
+    <string name="title_activity_main">FreshPrep</string>
+    <string name="package_name">com.freshprep.app</string>
+    <string name="custom_url_scheme">com.freshprep.app</string>
+    <string name="widget_today_description">Shows today\'s scheduled meals at a glance</string>
+    <string name="widget_glance_description">Shows meals ready and your current streak</string>
+    <string name="widget_shopping_description">Shopping list you can check off at the store</string>
+</resources>

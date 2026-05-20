@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Forest Deep palette — dark mode (widgets use dark regardless of system) -->
+    <color name="widget_bg">#1D2220</color>
+    <color name="widget_surface">#252E2A</color>
+    <color name="widget_raised">#1E3C28</color>
+    <color name="widget_accent">#2E7050</color>
+    <color name="widget_warm">#C49420</color>
+    <color name="widget_text">#C4D0CC</color>
+    <color name="widget_text_sec">#7A9080</color>
+    <color name="widget_eaten">#2E7050</color>
+</resources>

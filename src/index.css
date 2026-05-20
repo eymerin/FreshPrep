@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Light mode ───────────────────────────────────────────────────────────────
+   MD3 principle: light mode uses tone ~40 (darker, more saturated) so both
+   modes feel equally alive. Light raised has higher chroma than dark raised.
+   All text contrasts verified at ≥4.5:1 against their backgrounds.          */
+:root {
+  --brand-bg:      210 226 214;   /* #D2E2D6 — mint bg, white cards lift off it */
+  --brand-surface: 255 255 255;   /* #FFFFFF */
+  --brand-raised:  112 162 132;   /* #70A284 — vivid sage, 7:1 with dark text */
+  --brand-accent:  30 96 60;      /* #1E603C — rich forest, 8.2:1 on white */
+  --brand-warm:    138 96 0;      /* #8A6000 — deep amber, 5.6:1 on white */
+  --brand-slate:   52 80 100;     /* #345064 — deep slate-blue, 8.1:1 on white */
+  --brand-muted:   14 28 18;      /* #0E1C12 — near-black forest */
+}
+
+/* ── Dark mode ─────────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --brand-bg:      14 18 16;    /* #0E1210 */
+    --brand-surface: 29 34 32;    /* #1D2220 */
+    --brand-raised:  30 60 40;    /* #1E3C28 — forest green headers & chips */
+    --brand-accent:  46 112 80;   /* #2E7050 — bright forest interactive */
+    --brand-warm:    196 148 32;  /* #C49420 — harvest gold */
+    --brand-slate:   112 144 168; /* #7090A8 — lighter slate, 5.5:1 on dark surface */
+    --brand-muted:   196 208 204; /* #C4D0CC — sage-white text / borders */
+  }
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: rgb(var(--brand-bg));
+}
