@@ -85,7 +85,7 @@ const navTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
 ];
 
 // ── Desktop Sidebar ───────────────────────────────────────────
-function DesktopSidebar({ activeTab, onTabChange }: { activeTab: Tab; onTabChange: (tab: Tab) => void }) {
+function DesktopSidebar({ activeTab, onTabChange, onOpenAlerts }: { activeTab: Tab; onTabChange: (tab: Tab) => void; onOpenAlerts: () => void }) {
   const unreadCount    = useAppStore((s) => s.appNotifications.filter(n => !n.read).length);
   const userProfile    = useAppStore((s) => s.userProfile);
   const mealsEatenAllTime = useAppStore((s) => s.mealsEatenAllTime);
@@ -140,7 +140,7 @@ function DesktopSidebar({ activeTab, onTabChange }: { activeTab: Tab; onTabChang
       {/* Bottom section */}
       <div className="px-3 pb-4 space-y-1 border-t border-brand-muted/10 pt-3">
         {/* Alerts row */}
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-brand-muted/50">
+        <button onClick={onOpenAlerts} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-brand-muted/50 hover:text-brand-muted/80 hover:bg-brand-muted/5 transition-colors text-left">
           <span className="relative flex items-center justify-center w-9 h-8">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -156,7 +156,7 @@ function DesktopSidebar({ activeTab, onTabChange }: { activeTab: Tab; onTabChang
           {unreadCount > 0 && (
             <span className="ml-auto text-xs font-semibold text-brand-warm">{unreadCount}</span>
           )}
-        </div>
+        </button>
 
         {/* Profile row */}
         <button
@@ -202,7 +202,7 @@ export default function Layout({ activeTab, onTabChange, children }: LayoutProps
   return (
     <div className="min-h-screen bg-brand-bg lg:flex">
       {/* Desktop sidebar */}
-      <DesktopSidebar activeTab={activeTab} onTabChange={onTabChange} />
+      <DesktopSidebar activeTab={activeTab} onTabChange={onTabChange} onOpenAlerts={() => setShowNotifications(true)} />
 
       {/* Main content column */}
       <div className="flex-1 flex flex-col min-w-0">
