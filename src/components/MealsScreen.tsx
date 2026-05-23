@@ -146,21 +146,24 @@ function MealCard({
 }) {
   const unassigned = meal.servingsRemaining - assignedCount;
 
+  const isFridge = meal.storage === 'refrigerated';
+  const storageChipDot = isFridge ? 'bg-brand-accent' : 'bg-brand-slate';
+  const storageLabel = isFridge ? 'Fridge' : 'Frozen';
+
   if (viewMode === 'list') {
     return (
-      <div className="bg-brand-surface rounded-lg border border-brand-raised/40 px-4 py-3 flex items-center gap-4">
+      <div className="bg-brand-surface rounded-lg border border-brand-muted/15 px-4 py-3 flex items-center gap-4">
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-brand-muted text-sm leading-tight truncate">{meal.recipeName}</p>
+          <p className="font-semibold text-brand-muted text-sm leading-tight truncate">{meal.recipeName}</p>
           {meal.variantName && meal.variantName !== meal.recipeName && (
-            <p className="text-xs text-brand-muted/60 truncate">{meal.variantName}</p>
+            <p className="text-xs text-brand-muted/50 truncate">{meal.variantName}</p>
           )}
         </div>
-        <span className="text-xs text-brand-muted/40 shrink-0">
-          {meal.storage === 'refrigerated' ? 'Fridge' : 'Frozen'}
+        <span className="flex items-center gap-1.5 text-xs font-medium text-brand-muted/60 shrink-0">
+          <span className={`w-1.5 h-1.5 rounded-full ${storageChipDot}`} />
+          {storageLabel}
         </span>
-        <span className="text-xs text-brand-muted/50 shrink-0">
-          {meal.servingsRemaining} srv
-        </span>
+        <span className="text-xs text-brand-muted/50 shrink-0">{meal.servingsRemaining} srv</span>
         {meal.nutrientsPerServing && (
           <span className="text-xs text-brand-muted/50 shrink-0">
             {Math.round(meal.nutrientsPerServing.calories)} cal
@@ -170,10 +173,10 @@ function MealCard({
           <button
             onClick={onSchedule}
             disabled={unassigned <= 0}
-            className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${
+            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
               unassigned > 0
                 ? 'bg-brand-accent text-white hover:bg-brand-accent/80'
-                : 'bg-brand-surface border border-brand-raised/30 text-brand-muted/25 cursor-not-allowed'
+                : 'bg-brand-surface border border-brand-muted/15 text-brand-muted/25 cursor-not-allowed'
             }`}
           >
             {unassigned > 0 ? 'Schedule' : 'Scheduled'}
@@ -192,75 +195,82 @@ function MealCard({
   }
 
   return (
-    <div className="bg-brand-surface rounded-lg border border-brand-raised/40 p-4">
-      <div className="flex items-start justify-between gap-3">
+    <div className="bg-brand-surface rounded-xl border border-brand-muted/15 p-4 flex flex-col gap-3">
+      {/* Row 1: name + storage chip + checkbox */}
+      <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-brand-muted text-sm leading-tight">{meal.recipeName}</p>
+          <p className="font-semibold text-brand-muted text-[15px] leading-tight">{meal.recipeName}</p>
           {meal.variantName && meal.variantName !== meal.recipeName && (
-            <p className="text-xs text-brand-muted/60 mt-0.5">{meal.variantName}</p>
+            <p className="text-xs text-brand-muted/50 mt-0.5">{meal.variantName}</p>
           )}
         </div>
-        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-bg text-brand-muted shrink-0">
-          {meal.storage === 'refrigerated' ? '❄️ Fridge' : '🧊 Frozen'}
-        </span>
-      </div>
-
-      <div className="mt-3 space-y-1">
-        <div className="flex items-center gap-4 text-xs text-brand-muted/60">
-          <span>Prepped {formatDisplay(meal.prepDate)}</span>
-        </div>
-        <div className="flex items-center gap-4 text-xs">
-          <span className="text-brand-muted/60">Servings <span className="font-medium text-brand-muted">{meal.servingsRemaining}</span></span>
-          <span className={unassigned > 0 ? 'text-brand-muted/60' : 'text-brand-muted/30'}>
-            Unscheduled <span className={`font-medium ${unassigned > 0 ? 'text-brand-muted' : 'text-brand-muted/30'}`}>{unassigned}</span>
+        <div className="flex items-center gap-2 shrink-0 mt-0.5">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-brand-muted/70 bg-brand-bg border border-brand-muted/10 rounded-full px-2.5 py-1">
+            <span className={`w-1.5 h-1.5 rounded-full ${storageChipDot}`} />
+            {storageLabel}
           </span>
+          <div className="w-4 h-4 border border-brand-muted/25 rounded-sm bg-brand-bg shrink-0" />
         </div>
-        {meal.nutrientsPerServing && (
-          <div className="pt-1">
-            <p className="text-[10px] text-brand-muted/35 uppercase tracking-wide mb-0.5">Per serving</p>
-            <div className="flex items-center gap-3 text-xs text-brand-muted/50">
-              <span><span className="font-medium text-brand-muted">{Math.round(meal.nutrientsPerServing.calories)}</span> cal</span>
-              <span><span className="font-medium text-brand-muted">{Math.round(meal.nutrientsPerServing.protein)}g</span> protein</span>
-              <span><span className="font-medium text-brand-muted">{Math.round(meal.nutrientsPerServing.carbs)}g</span> carbs</span>
-              <span><span className="font-medium text-brand-muted">{Math.round(meal.nutrientsPerServing.fat)}g</span> fat</span>
-            </div>
-          </div>
-        )}
       </div>
 
+      {/* Row 2: metadata */}
+      <p className="text-xs text-brand-muted/50">
+        Prepped {formatDisplay(meal.prepDate)}
+        <span className="mx-1.5 text-brand-muted/20">·</span>
+        {meal.servingsRemaining} serving{meal.servingsRemaining !== 1 ? 's' : ''}
+        <span className="mx-1.5 text-brand-muted/20">·</span>
+        <span className={unassigned > 0 ? 'text-brand-muted/50' : 'text-brand-muted/25'}>
+          {unassigned} unscheduled
+        </span>
+      </p>
+
+      {/* Freshness bar */}
       <FreshnessBar meal={meal} />
 
-      <div className="flex gap-2 mt-3 pt-3 border-t border-brand-raised/30">
+      {/* Macros */}
+      {meal.nutrientsPerServing && (
+        <div className="flex gap-4">
+          {[
+            { val: Math.round(meal.nutrientsPerServing.calories), label: 'cal' },
+            { val: Math.round(meal.nutrientsPerServing.protein),  label: 'protein' },
+            { val: Math.round(meal.nutrientsPerServing.carbs),    label: 'carbs' },
+            { val: Math.round(meal.nutrientsPerServing.fat),      label: 'fat' },
+          ].map(({ val, label }) => (
+            <div key={label} className="flex flex-col">
+              <span className="text-sm font-semibold text-brand-muted leading-none">
+                {val}{label !== 'cal' ? 'g' : ''}
+              </span>
+              <span className="text-[10px] text-brand-muted/40 mt-0.5">{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-2 pt-1 border-t border-brand-muted/10">
         <button
           onClick={onSchedule}
           disabled={unassigned <= 0}
-          className={`flex-1 text-xs py-1.5 rounded-lg transition-colors font-medium ${
+          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
             unassigned > 0
               ? 'bg-brand-accent text-white hover:bg-brand-accent/80'
-              : 'bg-brand-surface border border-brand-raised/30 text-brand-muted/25 cursor-not-allowed'
+              : 'bg-transparent text-brand-muted/30 cursor-not-allowed'
           }`}
         >
-          {unassigned > 0 ? 'Schedule' : 'Fully Scheduled'}
+          {unassigned > 0 ? 'Schedule' : 'Fully scheduled'}
         </button>
         {confirmRemoveId === meal.id ? (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-brand-muted/50">Remove?</span>
-            <button
-              onClick={onRemove}
-              className="px-3 py-1.5 text-sm font-medium text-red-400 border border-red-400/30 rounded-lg hover:bg-red-400/10 transition-colors"
-            >Remove</button>
-            <button
-              onClick={() => setConfirmRemoveId(null)}
-              className="px-3 py-1.5 text-sm text-brand-muted/50 border border-brand-muted/20 rounded-lg hover:text-brand-muted transition-colors"
-            >Cancel</button>
+          <div className="flex items-center gap-1.5">
+            <button onClick={onRemove} className="text-xs text-red-400 px-2 py-1">Yes</button>
+            <button onClick={() => setConfirmRemoveId(null)} className="text-xs text-brand-muted/40 px-2 py-1">Cancel</button>
           </div>
         ) : (
           <button
             onClick={() => setConfirmRemoveId(meal.id)}
-            className="text-brand-muted/35 hover:text-red-400 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-red-400/10"
+            className="text-brand-muted/25 hover:text-red-400 transition-colors w-9 flex items-center justify-center rounded-lg hover:bg-red-400/10"
             aria-label="Remove meal"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="3 6 5 6 21 6" />
               <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
               <path d="M10 11v6M14 11v6" />
@@ -274,7 +284,7 @@ function MealCard({
 }
 
 // ── Main screen ───────────────────────────────────────────────
-export default function MealsScreen() {
+export default function MealsScreen({ onNavigate }: { onNavigate?: (tab: string) => void } = {}) {
   const preparedMeals      = useAppStore((s) => s.preparedMeals);
   const scheduledMeals     = useAppStore((s) => s.scheduledMeals);
   const removePreparedMeal = useAppStore((s) => s.removePreparedMeal);
@@ -360,19 +370,26 @@ export default function MealsScreen() {
 
   return (
     <div>
-      <div className="mb-5">
-        <p className="text-[11px] font-semibold text-brand-accent uppercase tracking-widest mb-0.5">Meals Ready</p>
-        <h2 className="text-xl font-semibold text-brand-muted">Meals Ready</h2>
-        <p className="text-sm text-brand-muted/50 mt-1">
-          {available.length > 0
-            ? `${available.length} prepared meal${available.length !== 1 ? 's' : ''} in inventory`
-            : 'No prepared meals in inventory'}
-        </p>
-        {available.length > 0 && (setForWeek || coverageDay) && (
-          <p className="text-xs text-brand-accent mt-1.5 font-medium">
-            {setForWeek ? "You're set for the week." : `Covered through ${coverageDay}.`}
-          </p>
-        )}
+      <div className="flex items-start justify-between gap-4 mb-5">
+        <div>
+          <p className="text-[11px] font-bold text-brand-accent uppercase tracking-widest mb-1">Meals Ready</p>
+          <h2 className="text-2xl font-semibold text-brand-muted tracking-tight">
+            {available.length > 0
+              ? `${available.length} prepared meal${available.length !== 1 ? 's' : ''} in inventory`
+              : 'No prepared meals in inventory'}
+          </h2>
+          {available.length > 0 && (setForWeek || coverageDay) && (
+            <p className="text-sm text-brand-accent mt-1 font-medium">
+              {setForWeek ? "You're set for the week." : `Covered through ${coverageDay}.`}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={() => onNavigate?.('prep')}
+          className="hidden lg:flex shrink-0 items-center gap-2 bg-brand-accent text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-accent/80 transition-colors"
+        >
+          + Log prep session
+        </button>
       </div>
 
       {/* Toolbar (view + sort) */}
@@ -526,60 +543,67 @@ export default function MealsScreen() {
         </div>
 
         {/* Desktop filter sidebar */}
-        <div className="hidden lg:block sticky top-6 bg-brand-surface border border-brand-muted/10 rounded-xl p-4 flex flex-col gap-4 space-y-4">
-          <p className="text-xs font-semibold text-brand-muted/50 uppercase tracking-wide">Filter</p>
+        <div className="hidden lg:flex flex-col gap-4 sticky top-6 bg-brand-surface border border-brand-muted/10 rounded-xl p-4">
 
           {/* Storage */}
-          <div>
-            <label className="block text-xs text-brand-muted/50 mb-1.5">Storage</label>
-            <select
-              value={storageFilter}
-              onChange={(e) => setStorageFilter(e.target.value)}
-              className="w-full bg-brand-bg border border-brand-muted/20 rounded-lg px-3 py-2 text-sm text-brand-muted focus:outline-none focus:border-brand-accent/60"
-            >
-              <option value="any">Any</option>
-              <option value="fridge">Fridge</option>
-              <option value="frozen">Frozen</option>
-            </select>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[10px] font-bold text-brand-muted/50 uppercase tracking-wider">Storage</p>
+            <div className="flex items-center gap-1.5">
+              <select
+                value={storageFilter}
+                onChange={(e) => setStorageFilter(e.target.value)}
+                className="flex-1 bg-brand-bg border border-brand-muted/15 rounded-lg px-3 py-2 text-sm text-brand-muted focus:outline-none focus:border-brand-accent/60 appearance-none"
+              >
+                <option value="any">Any storage</option>
+                <option value="fridge">Fridge</option>
+                <option value="frozen">Frozen</option>
+              </select>
+              <button onClick={() => setStorageFilter('any')} className="text-brand-muted/30 hover:text-brand-muted/60 text-base w-6 h-6 flex items-center justify-center transition-colors">×</button>
+            </div>
+            <button className="text-xs text-brand-muted/40 hover:text-brand-accent/70 transition-colors text-left">+ Add storage</button>
           </div>
+
+          <div className="h-px bg-brand-muted/8" />
 
           {/* Freshness */}
-          <div>
-            <label className="block text-xs text-brand-muted/50 mb-1.5">Freshness</label>
-            <select
-              value={freshnessFilter}
-              onChange={(e) => setFreshnessFilter(e.target.value)}
-              className="w-full bg-brand-bg border border-brand-muted/20 rounded-lg px-3 py-2 text-sm text-brand-muted focus:outline-none focus:border-brand-accent/60"
-            >
-              <option value="any">Any</option>
-              <option value="fresh">Fresh</option>
-              <option value="expiring">Expiring soon</option>
-              <option value="expired">Expired</option>
-            </select>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[10px] font-bold text-brand-muted/50 uppercase tracking-wider">Freshness</p>
+            <div className="flex items-center gap-1.5">
+              <select
+                value={freshnessFilter}
+                onChange={(e) => setFreshnessFilter(e.target.value)}
+                className="flex-1 bg-brand-bg border border-brand-muted/15 rounded-lg px-3 py-2 text-sm text-brand-muted focus:outline-none focus:border-brand-accent/60 appearance-none"
+              >
+                <option value="any">Any</option>
+                <option value="fresh">Fresh</option>
+                <option value="expiring">Expiring soon</option>
+                <option value="expired">Expired</option>
+              </select>
+              <button onClick={() => setFreshnessFilter('any')} className="text-brand-muted/30 hover:text-brand-muted/60 text-base w-6 h-6 flex items-center justify-center transition-colors">×</button>
+            </div>
+            <button className="text-xs text-brand-muted/40 hover:text-brand-accent/70 transition-colors text-left">+ Add freshness</button>
           </div>
 
-          {/* Schedule status */}
-          <div>
-            <label className="block text-xs text-brand-muted/50 mb-1.5">Schedule</label>
-            <select
-              value={scheduleFilter}
-              onChange={(e) => setScheduleFilter(e.target.value)}
-              className="w-full bg-brand-bg border border-brand-muted/20 rounded-lg px-3 py-2 text-sm text-brand-muted focus:outline-none focus:border-brand-accent/60"
-            >
-              <option value="any">Any</option>
-              <option value="unscheduled">Unscheduled</option>
-              <option value="scheduled">Fully scheduled</option>
-            </select>
+          <div className="h-px bg-brand-muted/8" />
+
+          {/* Schedule */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[10px] font-bold text-brand-muted/50 uppercase tracking-wider">Schedule</p>
+            <div className="flex items-center gap-1.5">
+              <select
+                value={scheduleFilter}
+                onChange={(e) => setScheduleFilter(e.target.value)}
+                className="flex-1 bg-brand-bg border border-brand-muted/15 rounded-lg px-3 py-2 text-sm text-brand-muted focus:outline-none focus:border-brand-accent/60 appearance-none"
+              >
+                <option value="any">Any</option>
+                <option value="unscheduled">Unscheduled</option>
+                <option value="scheduled">Fully scheduled</option>
+              </select>
+              <button onClick={() => setScheduleFilter('any')} className="text-brand-muted/30 hover:text-brand-muted/60 text-base w-6 h-6 flex items-center justify-center transition-colors">×</button>
+            </div>
+            <button className="text-xs text-brand-muted/40 hover:text-brand-accent/70 transition-colors text-left">+ Add status</button>
           </div>
 
-          {(storageFilter !== 'any' || freshnessFilter !== 'any' || scheduleFilter !== 'any') && (
-            <button
-              onClick={() => { setStorageFilter('any'); setFreshnessFilter('any'); setScheduleFilter('any'); }}
-              className="text-xs text-brand-accent hover:text-brand-accent/80 transition-colors text-left"
-            >
-              Clear filters
-            </button>
-          )}
         </div>
       </div>
 

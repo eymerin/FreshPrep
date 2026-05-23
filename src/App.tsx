@@ -35,7 +35,7 @@ export default function App() {
         {activeTab === 'plan'     && <PlanScreen onNavigate={(tab) => setActiveTab(tab as Tab)} />}
         {activeTab === 'prep'     && <PrepScreen />}
         {activeTab === 'schedule' && <ScheduleScreen onNavigate={(tab) => setActiveTab(tab as Tab)} />}
-        {activeTab === 'meals'    && <MealsScreen />}
+        {activeTab === 'meals'    && <MealsScreen onNavigate={(tab) => setActiveTab(tab as Tab)} />}
         {activeTab === 'recipes'  && <RecipesScreen />}
         {activeTab === 'profile'  && (
           <ProfileScreen onClose={() => setActiveTab('schedule')} pageMode />
