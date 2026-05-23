@@ -645,14 +645,201 @@ function DesktopInventoryRail({ onNavigate }: { onNavigate: (tab: Tab) => void }
   );
 }
 
+// ── Desktop weekly grid ───────────────────────────────────────
+function DesktopWeeklyGrid() {
+  const scheduledMeals    = useAppStore((s) => s.scheduledMeals);
+  const preparedMeals     = useAppStore((s) => s.preparedMeals);
+  const eatenScheduledIds = useAppStore((s) => s.eatenScheduledIds);
+  const getFreshnessStatus = useAppStore((s) => s.getFreshnessStatus);
+  const [assignTarget, setAssignTarget] = useState<{ date: string; mealTime: MealTime } | null>(null);
+  const weekDates = getWeekDates();
+  const today = format(new Date());
+
+  return (
+    <div>
+      <div className="lg:grid lg:grid-cols-7 lg:gap-2">
+        {weekDates.map((date) => {
+          const isToday = date === today;
+          const dayCalories = MEAL_TIMES.reduce((sum, mt) => {
+            const s = scheduledMeals.find(s => s.date === date && s.mealTime === mt);
+            const m = s ? preparedMeals.find(m => m.id === s.preparedMealId) : undefined;
+            return sum + (m?.nutrientsPerServing?.calories ?? 0);
+          }, 0);
+
+          return (
+            <div
+              key={date}
+              className={`rounded-xl border overflow-hidden ${
+                isToday
+                  ? 'border-brand-accent bg-brand-accent/5'
+                  : 'border-brand-muted/10 bg-brand-surface'
+              }`}
+            >
+              {/* Day header */}
+              <div className={`px-2 pt-2.5 pb-1.5 ${isToday ? 'bg-brand-accent/10' : 'bg-brand-raised/40'}`}>
+                <p className={`text-[11px] font-semibold uppercase tracking-wide ${isToday ? 'text-brand-accent' : 'text-brand-muted/50'}`}>
+                  {getDayLabel(date)}
+                </p>
+                <p className={`text-xs font-medium ${isToday ? 'text-brand-accent/80' : 'text-brand-muted/40'}`}>
+                  {parseISO(date).getDate()}
+                </p>
+                {dayCalories > 0 && (
+                  <p className="text-[10px] text-brand-accent/70 mt-0.5">{Math.round(dayCalories)}</p>
+                )}
+              </div>
+
+              {/* Meal slots */}
+              <div className="p-1.5 space-y-1">
+                {MEAL_TIMES.map((mealTime) => {
+                  const scheduled = scheduledMeals.find(s => s.date === date && s.mealTime === mealTime);
+                  const meal = scheduled ? preparedMeals.find(m => m.id === scheduled.preparedMealId) : undefined;
+                  const isEaten = scheduled ? eatenScheduledIds.includes(scheduled.id) : false;
+                  const freshness = meal ? getFreshnessStatus(meal) : 'fresh';
+                  const isExpiring = freshness === 'expiring' || freshness === 'expired';
+
+                  if (meal && scheduled) {
+                    return (
+                      <div
+                        key={mealTime}
+                        className={`px-1.5 py-1.5 rounded-lg border text-left w-full ${
+                          isExpiring
+                            ? 'border-amber-600/50 bg-amber-900/10'
+                            : 'border-brand-muted/10 bg-brand-bg/60'
+                        }`}
+                      >
+                        <p className="text-[10px] text-brand-muted/40 uppercase leading-none mb-0.5">
+                          {MEAL_TIME_LABELS[mealTime].slice(0, 4)}
+                        </p>
+                        <p className="text-[11px] font-medium text-brand-muted leading-tight truncate">
+                          {meal.recipeName}
+                        </p>
+                        {meal.nutrientsPerServing && (
+                          <p className="text-[10px] text-brand-muted/40 mt-0.5">
+                            {Math.round(meal.nutrientsPerServing.calories)} cal
+                          </p>
+                        )}
+                        <div className="flex items-center gap-1 mt-0.5">
+                          {isEaten && (
+                            <span className="text-[10px] text-brand-accent/80 font-medium">✓</span>
+                          )}
+                          {isExpiring && (
+                            <span className="text-[10px] text-amber-400 font-medium">!</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={mealTime}
+                      onClick={() => setAssignTarget({ date, mealTime })}
+                      className="w-full px-1.5 py-1.5 rounded-lg border border-dashed border-brand-muted/15 hover:border-brand-accent/40 hover:bg-brand-accent/5 transition-colors text-left"
+                    >
+                      <p className="text-[10px] text-brand-muted/25 hover:text-brand-accent/50 transition-colors">
+                        + {MEAL_TIME_LABELS[mealTime].slice(0, 4)}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {assignTarget && (
+        <AssignModal
+          date={assignTarget.date}
+          mealTime={assignTarget.mealTime}
+          onClose={() => setAssignTarget(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Desktop week strip (summary bar) ─────────────────────────
+function DesktopWeekStrip() {
+  const scheduledMeals    = useAppStore((s) => s.scheduledMeals);
+  const preparedMeals     = useAppStore((s) => s.preparedMeals);
+  const mealEatenDates    = useAppStore((s) => s.mealEatenDates);
+  const prepSessionsLogged = useAppStore((s) => s.prepSessionsLogged);
+  const userPrefs         = useAppStore((s) => s.userPrefs);
+
+  const weekDates     = getWeekDates();
+  const weekScheduled = scheduledMeals.filter(s => weekDates.includes(s.date));
+  const available     = preparedMeals.filter(m => m.servingsRemaining > 0);
+  const target        = userPrefs?.mealsPerWeek ?? null;
+  const weekEaten     = mealEatenDates.filter(d => weekDates.includes(d)).length;
+  const pct           = target ? Math.min(100, Math.round((weekScheduled.length / target) * 100)) : null;
+  const gap           = target ? Math.max(0, target - weekScheduled.length) : null;
+  const streak        = computeWeekStreak(mealEatenDates);
+
+  return (
+    <div className="hidden lg:flex gap-4 mt-4 bg-brand-surface rounded-xl border border-brand-muted/10 px-5 py-3">
+      {/* Meals scheduled */}
+      <div className="flex-1 flex flex-col gap-0.5">
+        <p className="text-[10px] text-brand-muted/40 uppercase tracking-wide">Meals scheduled</p>
+        <p className="text-sm font-semibold text-brand-muted">
+          {weekScheduled.length}{target !== null && <span className="text-brand-muted/40 font-normal"> / {target}</span>}
+        </p>
+        {pct !== null && (
+          <div className="h-1 bg-brand-bg rounded-full overflow-hidden mt-0.5">
+            <div className="h-full bg-brand-accent rounded-full" style={{ width: `${pct}%` }} />
+          </div>
+        )}
+        {gap !== null && gap > 0 && (
+          <p className="text-[10px] text-brand-muted/30">{gap} to target</p>
+        )}
+      </div>
+
+      {/* Eaten this week */}
+      <div className="flex-1 flex flex-col gap-0.5">
+        <p className="text-[10px] text-brand-muted/40 uppercase tracking-wide">Eaten</p>
+        <p className="text-sm font-semibold text-brand-muted">{weekEaten}</p>
+        <p className="text-[10px] text-brand-muted/30">this week</p>
+      </div>
+
+      {/* In inventory */}
+      <div className="flex-1 flex flex-col gap-0.5">
+        <p className="text-[10px] text-brand-muted/40 uppercase tracking-wide">In inventory</p>
+        <p className="text-sm font-semibold text-brand-muted">{available.length}</p>
+        <p className="text-[10px] text-brand-muted/30">meals ready</p>
+      </div>
+
+      {/* Streak */}
+      <div className="flex-1 flex flex-col gap-0.5">
+        <p className="text-[10px] text-brand-muted/40 uppercase tracking-wide">Streak</p>
+        <p className="text-sm font-semibold text-brand-muted">{streak} wk{streak !== 1 ? 's' : ''}</p>
+        <p className="text-[10px] text-brand-muted/30">consecutive</p>
+      </div>
+
+      {/* Prep sessions */}
+      <div className="flex-1 flex flex-col gap-0.5">
+        <p className="text-[10px] text-brand-muted/40 uppercase tracking-wide">Prep sessions</p>
+        <p className="text-sm font-semibold text-brand-muted">{prepSessionsLogged}</p>
+        <p className="text-[10px] text-brand-muted/30">total logged</p>
+      </div>
+    </div>
+  );
+}
+
 export default function ScheduleScreen({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
   const subTab = useAppStore((s) => s.calendarSubTab);
   const setSubTab = useAppStore((s) => s.setCalendarSubTab);
+  const [desktopView, setDesktopView] = useState<'weekly' | 'daily'>('weekly');
+
+  const weekDates = getWeekDates();
+  const monday = weekDates[0];
+  const sunday = weekDates[6];
+
   return (
     <div className="lg:grid lg:grid-cols-[1fr_312px] lg:gap-10 lg:items-start">
       {/* Left column: schedule content */}
       <div>
-        <div className="flex bg-brand-surface rounded-lg border border-brand-muted/15 p-1 mb-5">
+        {/* ── Mobile tab toggle (unchanged) ───────────────────── */}
+        <div className="flex lg:hidden bg-brand-surface rounded-lg border border-brand-muted/15 p-1 mb-5">
           <button
             onClick={() => setSubTab('daily')}
             className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${subTab === 'daily' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'}`}
@@ -666,8 +853,56 @@ export default function ScheduleScreen({ onNavigate }: { onNavigate: (tab: Tab) 
             Weekly
           </button>
         </div>
-        {subTab === 'daily' && <DailyView onNavigate={onNavigate} />}
-        {subTab === 'weekly' && <WeeklyView />}
+
+        {/* ── Mobile content (unchanged) ──────────────────────── */}
+        <div className="lg:hidden">
+          {subTab === 'daily' && <DailyView onNavigate={onNavigate} />}
+          {subTab === 'weekly' && <WeeklyView />}
+        </div>
+
+        {/* ── Desktop calendar header ──────────────────────────── */}
+        <div className="hidden lg:block mb-5">
+          <p className="text-[11px] font-semibold text-brand-accent/80 uppercase tracking-widest mb-1">
+            WEEK OF {formatDisplay(monday)} – {formatDisplay(sunday)}
+          </p>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-xl font-semibold text-brand-muted">
+              {formatDisplay(monday)} – {formatDisplay(sunday)}
+            </h1>
+            {/* Daily/Weekly segmented toggle */}
+            <div className="flex bg-brand-surface rounded-lg border border-brand-muted/15 p-0.5 shrink-0">
+              <button
+                onClick={() => setDesktopView('weekly')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${desktopView === 'weekly' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'}`}
+              >
+                Weekly
+              </button>
+              <button
+                onClick={() => setDesktopView('daily')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${desktopView === 'daily' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'}`}
+              >
+                Daily
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Desktop: weekly 7-column grid ───────────────────── */}
+        {desktopView === 'weekly' && (
+          <div className="hidden lg:block">
+            <DesktopWeeklyGrid />
+            <DesktopWeekStrip />
+          </div>
+        )}
+
+        {/* ── Desktop: daily view ──────────────────────────────── */}
+        {desktopView === 'daily' && (
+          <div className="hidden lg:block">
+            <DailyView onNavigate={onNavigate} />
+          </div>
+        )}
+
+        {/* Hide This Week + Momentum sections on desktop (shown in week strip) */}
       </div>
 
       {/* Right column: desktop-only rails */}

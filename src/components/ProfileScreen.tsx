@@ -81,14 +81,38 @@ function SettingsTab() {
   const setMeasure   = useAppStore(s => s.setMeasurementUnit);
   const notifSettings = useAppStore(s => s.notificationSettings);
   const updateNotif  = useAppStore(s => s.updateNotificationSettings);
+  const [activeSection, setActiveSection] = useState('nutrition');
 
   const mealTypeOptions = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
 
+  const settingsSections = [
+    { id: 'nutrition', label: 'Nutrition' },
+    { id: 'prep', label: 'Prep' },
+    { id: 'app', label: 'App' },
+    { id: 'notifications', label: 'Notifications' },
+  ];
+
   return (
     <div className="space-y-6 p-4">
+      {/* Desktop sub-nav */}
+      <div className="hidden lg:flex gap-1 bg-brand-bg rounded-lg p-1 mb-5">
+        {settingsSections.map(s => (
+          <button
+            key={s.id}
+            onClick={() => setActiveSection(s.id)}
+            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              activeSection === s.id
+                ? 'bg-brand-surface text-brand-muted shadow-sm'
+                : 'text-brand-muted/50 hover:text-brand-muted/70'
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
 
-      {/* Daily nutrition goals */}
-      <div className="space-y-3">
+      {/* Daily nutrition goals — shown always on mobile; on desktop only when activeSection === 'nutrition' */}
+      <div className={`space-y-3 ${activeSection !== 'nutrition' ? 'lg:hidden' : ''}`}>
         <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide">Daily Nutrition Goals</p>
         <p className="text-xs text-brand-muted/40 -mt-2">Leave blank to skip goal tracking for that macro.</p>
         <div className="grid grid-cols-2 gap-3">
@@ -101,7 +125,7 @@ function SettingsTab() {
 
       {/* Prep preferences */}
       {userPrefs && (
-        <div className="space-y-4 pt-4 border-t border-brand-muted/10">
+        <div className={`space-y-4 pt-4 border-t border-brand-muted/10 ${activeSection !== 'prep' ? 'lg:hidden' : ''}`}>
           <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide">Prep Preferences</p>
 
           <div className="space-y-1.5">
@@ -151,7 +175,7 @@ function SettingsTab() {
       )}
 
       {/* App preferences */}
-      <div className="space-y-3 pt-4 border-t border-brand-muted/10">
+      <div className={`space-y-3 pt-4 border-t border-brand-muted/10 ${activeSection !== 'app' ? 'lg:hidden' : ''}`}>
         <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide">App Preferences</p>
         <div className="flex items-center justify-between">
           <div>
@@ -172,7 +196,7 @@ function SettingsTab() {
       </div>
 
       {/* Notification settings */}
-      <div className="space-y-4 pt-4 border-t border-brand-muted/10">
+      <div className={`space-y-4 pt-4 border-t border-brand-muted/10 ${activeSection !== 'notifications' ? 'lg:hidden' : ''}`}>
         <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide">Notifications</p>
 
         <div className="flex items-center justify-between">
@@ -364,7 +388,8 @@ function ProfileBody({ onClose: _onClose, pageMode }: { onClose: () => void; pag
     return (
       <>
         <div className="mb-5">
-          <h2 className="text-lg font-semibold text-brand-muted">Profile</h2>
+          <p className="text-[11px] font-semibold text-brand-accent uppercase tracking-widest mb-0.5">Profile</p>
+          <h2 className="text-xl font-semibold text-brand-muted">Profile</h2>
         </div>
         <div className="lg:grid lg:grid-cols-[320px_1fr] lg:gap-7 lg:items-start space-y-4 lg:space-y-0">
           <div className="lg:sticky lg:top-6">{leftCol}</div>

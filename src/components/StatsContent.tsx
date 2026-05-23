@@ -60,6 +60,16 @@ export default function StatsContent() {
     );
   }
 
+  // Compute last 10 weeks of meal counts
+  const weeks = Array.from({ length: 10 }, (_, i) => {
+    const refDate = format(addDays(new Date(), -(9 - i) * 7));
+    const monday = getMondayOfWeek(refDate);
+    const count = mealEatenDates.filter(d => getMondayOfWeek(d) === monday).length;
+    const isCurrentWeek = i === 9;
+    return { monday, count, isCurrentWeek };
+  });
+  const maxCount = Math.max(...weeks.map(w => w.count), userPrefs?.mealsPerWeek ?? 5);
+
   return (
     <div className="space-y-7">
       <div>
@@ -70,23 +80,54 @@ export default function StatsContent() {
           <Stat value={activeWeeks} unit={activeWeeks === 1 ? 'wk' : 'wks'} label="active weeks total" wide />
         </div>
         {atPeak && currentStreak > 1 && <p className="text-xs text-brand-accent/70 mt-2.5">Current streak matches your all-time best.</p>}
-      </div>
-      <div>
-        <SectionHead label="Execution" description="Meals cooked and eaten since you started tracking." />
-        <div className="grid grid-cols-2 gap-2">
-          <Stat value={prepSessionsLogged} label="prep sessions" />
-          <Stat value={weekEaten} label="eaten this week" />
-          <Stat value={mealsEatenAllTime} label="total meals eaten from prep" wide />
+
+        {/* Weekly bar chart — last 10 weeks */}
+        <div className="grid grid-cols-10 gap-1.5 items-end h-20 mt-3 px-1">
+          {weeks.map((week, i) => {
+            const heightPct = maxCount > 0 ? (week.count / maxCount) * 100 : 0;
+            const atTarget = userPrefs && week.count >= (userPrefs.mealsPerWeek ?? 0);
+            const barColor = week.count === 0
+              ? 'bg-brand-muted/10'
+              : week.isCurrentWeek
+              ? 'bg-brand-accent'
+              : atTarget
+              ? 'bg-brand-accent/70'
+              : 'bg-brand-muted/25';
+            return (
+              <div key={i} className="flex flex-col items-center justify-end gap-1 h-full">
+                <div
+                  className={`w-full rounded-sm transition-all ${barColor}`}
+                  style={{ height: `${Math.max(heightPct, week.count > 0 ? 8 : 4)}%` }}
+                  title={`Week of ${week.monday}: ${week.count} meals`}
+                />
+                {week.count > 0 && (
+                  <span className="text-[9px] text-brand-muted/40 leading-none">{week.count}</span>
+                )}
+              </div>
+            );
+          })}
         </div>
+        <p className="text-[10px] text-brand-muted/30 mt-1 text-right">last 10 weeks</p>
       </div>
-      <div>
-        <SectionHead
-          label="Planning"
-          description={userPrefs ? `Weeks where you hit your target of ${target} meal${target !== 1 ? 's' : ''}.` : 'Weeks where you ate 3 or more prepped meals.'}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <Stat value={weeksOnTarget} label="weeks on target" />
-          <Stat value={activeWeeks > 0 ? `${Math.round((weeksOnTarget / activeWeeks) * 100)}%` : '—'} label="hit rate" />
+
+      <div className="lg:grid lg:grid-cols-2 lg:gap-5">
+        <div>
+          <SectionHead label="Execution" description="Meals cooked and eaten since you started tracking." />
+          <div className="grid grid-cols-2 gap-2">
+            <Stat value={prepSessionsLogged} label="prep sessions" />
+            <Stat value={weekEaten} label="eaten this week" />
+            <Stat value={mealsEatenAllTime} label="total meals eaten from prep" wide />
+          </div>
+        </div>
+        <div>
+          <SectionHead
+            label="Planning"
+            description={userPrefs ? `Weeks where you hit your target of ${target} meal${target !== 1 ? 's' : ''}.` : 'Weeks where you ate 3 or more prepped meals.'}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <Stat value={weeksOnTarget} label="weeks on target" />
+            <Stat value={activeWeeks > 0 ? `${Math.round((weeksOnTarget / activeWeeks) * 100)}%` : '—'} label="hit rate" />
+          </div>
         </div>
       </div>
     </div>

@@ -237,6 +237,7 @@ export default function PrepScreen() {
   const recipes            = useAppStore((s) => s.recipes);
   const logPrepEvent       = useAppStore((s) => s.logPrepEvent);
   const pendingPreps       = useAppStore((s) => s.pendingPreps);
+  const markPrepComplete   = useAppStore((s) => s.markPrepComplete);
 
   const [recipeId, setRecipeId] = useState('');
   const [variantId, setVariantId] = useState('');
@@ -245,6 +246,7 @@ export default function PrepScreen() {
   const [prepDate, setPrepDate] = useState(format(new Date()));
   const [storage, setStorage] = useState<StorageType>('refrigerated');
   const [success, setSuccess] = useState(false);
+  const [logDrawerOpen, setLogDrawerOpen] = useState(false);
 
   const recipe = recipes.find((r) => r.id === recipeId);
   const isComposed = recipe?.type === 'composed';
@@ -268,6 +270,8 @@ export default function PrepScreen() {
     setSuccess(true);
     setTimeout(() => setSuccess(false), 5000);
   }
+
+  const totalPendingServings = pendingPreps.reduce((sum, p) => sum + p.servings, 0);
 
   const manualForm = (
     <form onSubmit={handleSubmit} className="bg-brand-surface rounded-lg border border-brand-muted/15 p-6 space-y-5">
@@ -343,13 +347,12 @@ export default function PrepScreen() {
     </form>
   );
 
-  // ── Mobile layout ─────────────────────────────────────────
-  // ── Desktop layout: 3 columns ─────────────────────────────
   return (
     <div>
       {/* Screen heading (always visible) */}
       <div className="mb-5">
-        <h2 className="text-lg font-semibold text-brand-muted">Log Prep</h2>
+        <p className="text-[11px] font-semibold text-brand-accent uppercase tracking-widest mb-0.5">Log Prep</p>
+        <h2 className="text-xl font-semibold text-brand-muted">Log Prep</h2>
         <p className="text-sm text-brand-muted/50 mt-1">
           {pendingPreps.length > 0
             ? `${pendingPreps.length} meal${pendingPreps.length !== 1 ? 's' : ''} from your plan ready to confirm.`
@@ -357,20 +360,60 @@ export default function PrepScreen() {
         </p>
       </div>
 
-      {/* Desktop 3-column grid */}
-      <div className="lg:grid lg:grid-cols-[320px_1fr_280px] lg:gap-7 lg:items-start">
+      {/* ── Mobile layout ─────────────────────────────────────── */}
+      <div className="lg:hidden">
+        {pendingPreps.length > 0 && (
+          <div className="mb-6">
+            <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide mb-3">From Your Plan</p>
+            <div className="space-y-3">
+              {pendingPreps.map((p) => <PendingCard key={p.id} pending={p} />)}
+            </div>
+            <div className="border-t border-brand-muted/10 mt-6 pt-5">
+              <p className="text-xs text-brand-muted/40 mb-4">Or log a different meal manually:</p>
+            </div>
+          </div>
+        )}
+        {success && <SuccessCard onDismiss={() => setSuccess(false)} />}
+        {manualForm}
+      </div>
 
-        {/* Left col: From Your Plan */}
+      {/* ── Desktop layout: 2 columns ─────────────────────────── */}
+      <div className="hidden lg:grid lg:grid-cols-[1fr_clamp(280px,24vw,320px)] lg:gap-8 lg:items-start">
+
+        {/* Left col: queue + collapsible log drawer */}
         <div>
+          {/* Batch action banner */}
+          {pendingPreps.length > 0 && (
+            <div className="bg-brand-accent/15 border border-brand-accent/25 rounded-xl p-4 flex items-center justify-between mb-5">
+              <div>
+                <p className="text-sm font-semibold text-brand-muted">
+                  {pendingPreps.length} meal{pendingPreps.length !== 1 ? 's' : ''} ready to confirm
+                </p>
+                <p className="text-xs text-brand-muted/50 mt-0.5">{totalPendingServings} total servings</p>
+              </div>
+              <button
+                onClick={() => {
+                  pendingPreps.forEach(p => {
+                    markPrepComplete(p.id, 'refrigerated', {}, p.variantId || undefined);
+                  });
+                }}
+                className="px-4 py-2 bg-brand-accent text-white rounded-lg text-sm font-semibold hover:bg-brand-accent/80 transition-colors shrink-0"
+              >
+                ✓ Mark all as prepped
+              </button>
+            </div>
+          )}
+
+          {/* Pending queue */}
           {pendingPreps.length > 0 ? (
             <div>
-              <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide mb-3 hidden lg:block">From Your Plan</p>
-              <div className="space-y-3">
+              <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide mb-3">From Your Plan</p>
+              <div className="lg:grid lg:grid-cols-2 lg:gap-3">
                 {pendingPreps.map((p) => <PendingCard key={p.id} pending={p} />)}
               </div>
             </div>
           ) : (
-            <div className="hidden lg:flex flex-col items-center justify-center py-16 text-center">
+            <div className="flex flex-col items-center justify-center py-16 text-center">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/20 mb-3">
                 <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
                 <rect x="9" y="3" width="6" height="4" rx="1" />
@@ -380,25 +423,29 @@ export default function PrepScreen() {
             </div>
           )}
 
-          {/* Mobile: show pending preps inline above form */}
-          {pendingPreps.length > 0 && (
-            <div className="lg:hidden mb-6">
-              <div className="border-t border-brand-muted/10 mt-6 pt-5">
-                <p className="text-xs text-brand-muted/40 mb-4">Or log a different meal manually:</p>
+          {/* Collapsible manual log drawer */}
+          <div className="mt-6">
+            <button
+              onClick={() => setLogDrawerOpen(o => !o)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-brand-muted/15 text-sm text-brand-muted/60 hover:text-brand-muted hover:border-brand-muted/30 transition-colors"
+            >
+              <span>Log a different meal</span>
+              <span className="text-brand-muted/30">{logDrawerOpen ? '▲' : '▼'}</span>
+            </button>
+            {logDrawerOpen && (
+              <div className="mt-3">
+                {success && <SuccessCard onDismiss={() => setSuccess(false)} />}
+                {manualForm}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Center col: Log Manually */}
-        <div>
-          <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide mb-3 hidden lg:block">Log Manually</p>
+        {/* Right col: success card + recent sessions */}
+        <div className="hidden lg:block sticky top-6">
           {success && <SuccessCard onDismiss={() => setSuccess(false)} />}
-          {manualForm}
+          <JustPreppedRail />
         </div>
-
-        {/* Right col: Just Prepped (desktop only) */}
-        <JustPreppedRail />
       </div>
     </div>
   );

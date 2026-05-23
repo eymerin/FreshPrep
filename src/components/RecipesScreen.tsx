@@ -1728,6 +1728,12 @@ function RecipeList({ onSelect }: { onSelect: (id: string) => void }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [tagFilter,   setTagFilter]   = useState<string | null>(null);
 
+  // Desktop view/filter state
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [nutritionFilter, setNutritionFilter] = useState('all');
+
   const allTags = useMemo(() => {
     const s = new Set<string>();
     for (const r of recipes) for (const t of r.tags ?? []) s.add(t);
@@ -1740,6 +1746,35 @@ function RecipeList({ onSelect }: { onSelect: (id: string) => void }) {
     if (tagFilter) r = r.filter(rc => rc.tags?.includes(tagFilter));
     return r;
   }, [recipes, searchQuery, tagFilter]);
+
+  // Desktop filtered recipes
+  const desktopVisibleRecipes = useMemo(() => {
+    let r = recipes;
+    if (searchQuery.trim()) r = searchRecipes(r, searchQuery.trim());
+    // Tag filters (multi-select)
+    if (activeTagFilters.length > 0) {
+      r = r.filter(rc => activeTagFilters.every(t => rc.tags?.includes(t)));
+    }
+    // Type filter
+    if (typeFilter === 'recipes') r = r.filter(rc => rc.type === 'standard');
+    if (typeFilter === 'composed') r = r.filter(rc => rc.type === 'composed');
+    // Nutrition filter
+    if (nutritionFilter === 'complete') {
+      r = r.filter(rc => {
+        if (rc.type === 'composed') return false;
+        const { linked, total } = ingredientNutritionCoverage(rc);
+        return total > 0 && linked === total;
+      });
+    }
+    if (nutritionFilter === 'partial') {
+      r = r.filter(rc => {
+        if (rc.type === 'composed') return false;
+        const { linked, total } = ingredientNutritionCoverage(rc);
+        return total > 0 && linked < total;
+      });
+    }
+    return r;
+  }, [recipes, searchQuery, activeTagFilters, typeFilter, nutritionFilter]);
 
   function createRecipe() {
     if (!newName.trim()) return;
@@ -1756,8 +1791,56 @@ function RecipeList({ onSelect }: { onSelect: (id: string) => void }) {
 
   return (
     <div>
-      {/* Header row */}
-      <div className="flex items-center gap-2 mb-4">
+      {/* Page eyebrow + title */}
+      <div className="mb-4">
+        <p className="text-[11px] font-semibold text-brand-accent uppercase tracking-widest mb-0.5">Recipes</p>
+        <h2 className="text-xl font-semibold text-brand-muted lg:hidden">Recipes</h2>
+      </div>
+
+      {/* ── Desktop toolbar ─────────────────────────────────── */}
+      <div className="hidden lg:flex items-center gap-2 mb-4">
+        {/* View toggle */}
+        <div className="flex bg-brand-surface rounded-lg border border-brand-muted/15 p-0.5 shrink-0">
+          <button
+            onClick={() => setViewMode('card')}
+            className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'card' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/40 hover:text-brand-muted/70'}`}
+            aria-label="Card view"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/40 hover:text-brand-muted/70'}`}
+            aria-label="List view"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Search bar */}
+        <input
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Search recipes, ingredients…"
+          className="flex-1 bg-brand-bg border border-brand-muted/20 rounded-lg px-3 py-1.5 text-sm text-brand-muted placeholder:text-brand-muted/30 focus:outline-none focus:border-brand-accent/60"
+        />
+
+        {/* New recipe button */}
+        <button
+          onClick={() => setShowNewForm(true)}
+          className="text-sm bg-brand-accent text-white px-3 py-1.5 rounded-lg font-medium hover:bg-brand-accent/80 transition-colors shrink-0"
+        >
+          + New Recipe
+        </button>
+      </div>
+
+      {/* ── Mobile header row (unchanged) ─────────────────── */}
+      <div className="flex items-center gap-2 mb-4 lg:hidden">
         {!searchOpen && (
           <h2 className="text-lg font-semibold text-brand-muted flex-1">Recipes</h2>
         )}
@@ -1794,9 +1877,9 @@ function RecipeList({ onSelect }: { onSelect: (id: string) => void }) {
         </div>
       </div>
 
-      {/* Tag filter bar — shown when tags exist */}
+      {/* Tag filter bar — mobile only, shown when tags exist */}
       {allTags.length > 0 && (
-        <div className="flex gap-1.5 flex-wrap mb-4">
+        <div className="flex lg:hidden gap-1.5 flex-wrap mb-4">
           {allTags.map(tag => (
             <button key={tag} onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
@@ -1810,9 +1893,9 @@ function RecipeList({ onSelect }: { onSelect: (id: string) => void }) {
         </div>
       )}
 
-      {/* Active filter summary */}
+      {/* Active filter summary (mobile) */}
       {(searchQuery.trim() || tagFilter) && (
-        <p className="text-xs text-brand-muted/40 mb-3">
+        <p className="text-xs text-brand-muted/40 mb-3 lg:hidden">
           {visibleRecipes.length} result{visibleRecipes.length !== 1 ? 's' : ''}
           {searchQuery.trim() && <> for "<span className="text-brand-muted/60">{searchQuery}</span>"</>}
           {tagFilter && <> tagged <span className="text-brand-accent">{tagFilter}</span></>}
@@ -1820,6 +1903,20 @@ function RecipeList({ onSelect }: { onSelect: (id: string) => void }) {
           <button onClick={() => { setSearchQuery(''); setTagFilter(null); closeSearch(); }}
             className="text-brand-accent hover:text-brand-accent/80 transition-colors">
             Clear
+          </button>
+        </p>
+      )}
+
+      {/* Desktop active filter summary */}
+      {(searchQuery.trim() || activeTagFilters.length > 0 || typeFilter !== 'all' || nutritionFilter !== 'all') && (
+        <p className="hidden lg:block text-xs text-brand-muted/40 mb-3">
+          {desktopVisibleRecipes.length} result{desktopVisibleRecipes.length !== 1 ? 's' : ''}
+          {' · '}
+          <button
+            onClick={() => { setSearchQuery(''); setActiveTagFilters([]); setTypeFilter('all'); setNutritionFilter('all'); }}
+            className="text-brand-accent hover:text-brand-accent/80 transition-colors"
+          >
+            Clear filters
           </button>
         </p>
       )}
@@ -1903,81 +2000,192 @@ function RecipeList({ onSelect }: { onSelect: (id: string) => void }) {
         </div>
       )}
 
-      {recipes.length > 0 && visibleRecipes.length === 0 && (
-        <p className="text-sm text-brand-muted/40 text-center py-10">No recipes match your search.</p>
-      )}
+      {/* ── Desktop 2-column layout ─────────────────────────────── */}
+      <div className="lg:grid lg:grid-cols-[1fr_clamp(220px,18vw,260px)] lg:gap-8 lg:items-start">
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {visibleRecipes.map((recipe) => {
-          const { linked, total } = recipe.type === 'standard' ? ingredientNutritionCoverage(recipe) : { linked: 0, total: 0 };
-          const displayTags = recipe.tags?.slice(0, 3) ?? [];
-          const extraTags   = (recipe.tags?.length ?? 0) - 3;
-          return (
-            <button key={recipe.id} onClick={() => onSelect(recipe.id)}
-              className="w-full bg-brand-surface rounded-lg border border-brand-muted/15 p-4 text-left hover:bg-brand-muted/5 transition-colors">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium text-brand-muted text-sm">{recipe.name}</p>
-                  {recipe.description && (
-                    <p className="text-xs text-brand-muted/50 mt-0.5 truncate">{recipe.description}</p>
-                  )}
-                </div>
-                <span className="text-brand-muted/30 text-xs shrink-0">→</span>
-              </div>
+        {/* Left column: recipe grid */}
+        <div>
+          {/* Mobile: show mobile-filtered results */}
+          <div className="lg:hidden">
+            {recipes.length > 0 && visibleRecipes.length === 0 && (
+              <p className="text-sm text-brand-muted/40 text-center py-10">No recipes match your search.</p>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {visibleRecipes.map((recipe) => {
+                const { linked, total } = recipe.type === 'standard' ? ingredientNutritionCoverage(recipe) : { linked: 0, total: 0 };
+                const displayTags = recipe.tags?.slice(0, 3) ?? [];
+                const extraTags   = (recipe.tags?.length ?? 0) - 3;
+                return (
+                  <button key={recipe.id} onClick={() => onSelect(recipe.id)}
+                    className="w-full bg-brand-surface rounded-lg border border-brand-muted/15 p-4 text-left hover:bg-brand-muted/5 transition-colors">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-brand-muted text-sm">{recipe.name}</p>
+                        {recipe.description && <p className="text-xs text-brand-muted/50 mt-0.5 truncate">{recipe.description}</p>}
+                      </div>
+                      <span className="text-brand-muted/30 text-xs shrink-0">→</span>
+                    </div>
+                    {displayTags.length > 0 && (
+                      <div className="flex gap-1 mt-2 flex-wrap">
+                        {displayTags.map(tag => (
+                          <span key={tag} className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${tagFilter === tag ? 'bg-brand-accent/20 border-brand-accent/40 text-brand-accent' : 'bg-brand-bg border-brand-muted/15 text-brand-muted/50'}`}>{tag}</span>
+                        ))}
+                        {extraTags > 0 && <span className="text-[11px] text-brand-muted/35">+{extraTags}</span>}
+                      </div>
+                    )}
+                    <div className="flex gap-3 mt-2 flex-wrap">
+                      <span className="text-xs text-brand-muted/40">
+                        {recipe.type === 'composed' ? `${recipe.slots?.length || 0} slot${(recipe.slots?.length || 0) !== 1 ? 's' : ''}` : `${recipe.coreIngredients.length} core ingredient${recipe.coreIngredients.length !== 1 ? 's' : ''}`}
+                      </span>
+                      {recipe.type === 'standard' && recipe.variants.length > 0 && <span className="text-xs text-brand-muted/40">{recipe.variants.length} variant{recipe.variants.length !== 1 ? 's' : ''}</span>}
+                      <span className="text-xs text-brand-muted/30">{recipe.type === 'composed' ? 'Build-Your-Own · 1 meal per build' : `Makes ${recipe.serves ?? 4} meals`}</span>
+                      {total > 0 && <span className={`text-xs ${linked === total ? 'text-emerald-400/70' : 'text-brand-muted/30'}`}>{linked === total ? '● nutrition' : `○ ${linked}/${total} nutrition`}</span>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-              {/* Tags row */}
-              {displayTags.length > 0 && (
-                <div className="flex gap-1 mt-2 flex-wrap">
-                  {displayTags.map(tag => (
-                    <span key={tag}
-                      className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${
-                        tagFilter === tag
-                          ? 'bg-brand-accent/20 border-brand-accent/40 text-brand-accent'
-                          : 'bg-brand-bg border-brand-muted/15 text-brand-muted/50'
-                      }`}>
-                      {tag}
-                    </span>
-                  ))}
-                  {extraTags > 0 && (
-                    <span className="text-[11px] text-brand-muted/35">+{extraTags}</span>
-                  )}
-                </div>
-              )}
-
-              <div className="flex gap-3 mt-2 flex-wrap">
-                <span className="text-xs text-brand-muted/40">
-                  {recipe.type === 'composed'
-                    ? `${recipe.slots?.length || 0} slot${(recipe.slots?.length || 0) !== 1 ? 's' : ''}`
-                    : `${recipe.coreIngredients.length} core ingredient${recipe.coreIngredients.length !== 1 ? 's' : ''}`}
-                </span>
-                {recipe.type === 'standard' && recipe.variants.length > 0 && (
-                  <span className="text-xs text-brand-muted/40">
-                    {recipe.variants.length} variant{recipe.variants.length !== 1 ? 's' : ''}
-                  </span>
-                )}
-                <span className="text-xs text-brand-muted/30">
-                  {recipe.type === 'composed'
-                    ? 'Build-Your-Own · 1 meal per build'
-                    : `Makes ${recipe.serves ?? 4} meals`}
-                </span>
-                {recipe.type === 'composed' && (() => {
-                  const range = composedCalRange(recipe);
-                  if (!range) return null;
+          {/* Desktop: show desktop-filtered results */}
+          <div className="hidden lg:block">
+            {recipes.length > 0 && desktopVisibleRecipes.length === 0 && (
+              <p className="text-sm text-brand-muted/40 text-center py-10">No recipes match your filters.</p>
+            )}
+            {viewMode === 'card' ? (
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3">
+                {desktopVisibleRecipes.map((recipe) => {
+                  const { linked, total } = recipe.type === 'standard' ? ingredientNutritionCoverage(recipe) : { linked: 0, total: 0 };
+                  const displayTags = recipe.tags?.slice(0, 3) ?? [];
+                  const extraTags   = (recipe.tags?.length ?? 0) - 3;
                   return (
-                    <span className="text-xs text-emerald-400/70">
-                      {range.min}–{range.max} cal
-                    </span>
+                    <button key={recipe.id} onClick={() => onSelect(recipe.id)}
+                      className="w-full bg-brand-surface rounded-lg border border-brand-muted/15 p-4 text-left hover:bg-brand-muted/5 transition-colors">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium text-brand-muted text-sm">{recipe.name}</p>
+                          {recipe.description && <p className="text-xs text-brand-muted/50 mt-0.5 truncate">{recipe.description}</p>}
+                        </div>
+                        <span className="text-brand-muted/30 text-xs shrink-0">→</span>
+                      </div>
+                      {displayTags.length > 0 && (
+                        <div className="flex gap-1 mt-2 flex-wrap">
+                          {displayTags.map(tag => (
+                            <span key={tag} className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${activeTagFilters.includes(tag) ? 'bg-brand-accent/20 border-brand-accent/40 text-brand-accent' : 'bg-brand-bg border-brand-muted/15 text-brand-muted/50'}`}>{tag}</span>
+                          ))}
+                          {extraTags > 0 && <span className="text-[11px] text-brand-muted/35">+{extraTags}</span>}
+                        </div>
+                      )}
+                      <div className="flex gap-3 mt-2 flex-wrap">
+                        <span className="text-xs text-brand-muted/40">
+                          {recipe.type === 'composed' ? `${recipe.slots?.length || 0} slot${(recipe.slots?.length || 0) !== 1 ? 's' : ''}` : `${recipe.coreIngredients.length} core ingredient${recipe.coreIngredients.length !== 1 ? 's' : ''}`}
+                        </span>
+                        {recipe.type === 'standard' && recipe.variants.length > 0 && <span className="text-xs text-brand-muted/40">{recipe.variants.length} variant{recipe.variants.length !== 1 ? 's' : ''}</span>}
+                        <span className="text-xs text-brand-muted/30">{recipe.type === 'composed' ? 'Build-Your-Own · 1 meal per build' : `Makes ${recipe.serves ?? 4} meals`}</span>
+                        {recipe.type === 'composed' && (() => { const range = composedCalRange(recipe); if (!range) return null; return <span className="text-xs text-emerald-400/70">{range.min}–{range.max} cal</span>; })()}
+                        {total > 0 && <span className={`text-xs ${linked === total ? 'text-emerald-400/70' : 'text-brand-muted/30'}`}>{linked === total ? '● nutrition' : `○ ${linked}/${total} nutrition`}</span>}
+                      </div>
+                    </button>
                   );
-                })()}
-                {total > 0 && (
-                  <span className={`text-xs ${linked === total ? 'text-emerald-400/70' : 'text-brand-muted/30'}`}>
-                    {linked === total ? '● nutrition' : `○ ${linked}/${total} nutrition`}
-                  </span>
-                )}
+                })}
               </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {desktopVisibleRecipes.map((recipe) => {
+                  const { linked, total } = recipe.type === 'standard' ? ingredientNutritionCoverage(recipe) : { linked: 0, total: 0 };
+                  const displayTags = recipe.tags?.slice(0, 3) ?? [];
+                  return (
+                    <button key={recipe.id} onClick={() => onSelect(recipe.id)}
+                      className="w-full bg-brand-surface rounded-lg border border-brand-muted/15 px-4 py-3 text-left hover:bg-brand-muted/5 transition-colors flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-brand-muted text-sm truncate">{recipe.name}</p>
+                        {recipe.description && <p className="text-xs text-brand-muted/50 truncate">{recipe.description}</p>}
+                      </div>
+                      {displayTags.length > 0 && (
+                        <div className="flex gap-1 shrink-0">
+                          {displayTags.slice(0, 2).map(tag => (
+                            <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-bg border border-brand-muted/15 text-brand-muted/50">{tag}</span>
+                          ))}
+                        </div>
+                      )}
+                      <span className="text-xs text-brand-muted/30 shrink-0">
+                        {recipe.type === 'composed' ? 'BYO' : `${recipe.serves ?? 4} meals`}
+                      </span>
+                      {total > 0 && <span className={`text-xs shrink-0 ${linked === total ? 'text-emerald-400/70' : 'text-brand-muted/30'}`}>{linked === total ? '●' : `○ ${linked}/${total}`}</span>}
+                      <span className="text-brand-muted/30 text-xs shrink-0">→</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Desktop filter sidebar */}
+        <div className="hidden lg:flex flex-col gap-4 sticky top-6 bg-brand-surface border border-brand-muted/10 rounded-xl p-4">
+          <p className="text-xs font-semibold text-brand-muted/50 uppercase tracking-wide">Filter</p>
+
+          {/* Tags */}
+          {allTags.length > 0 && (
+            <div>
+              <p className="text-xs text-brand-muted/50 mb-2">Tags</p>
+              <div className="flex flex-wrap gap-1.5">
+                {allTags.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => setActiveTagFilters(prev =>
+                      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                    )}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
+                      activeTagFilters.includes(tag)
+                        ? 'bg-brand-accent text-white border-brand-accent'
+                        : 'bg-brand-bg text-brand-muted/50 border-brand-muted/15 hover:border-brand-accent/40 hover:text-brand-muted'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Type */}
+          <div>
+            <p className="text-xs text-brand-muted/50 mb-1.5">Type</p>
+            <select
+              value={typeFilter}
+              onChange={e => setTypeFilter(e.target.value)}
+              className="w-full bg-brand-bg border border-brand-muted/20 rounded-lg px-3 py-2 text-sm text-brand-muted focus:outline-none focus:border-brand-accent/60"
+            >
+              <option value="all">All</option>
+              <option value="recipes">Recipes</option>
+              <option value="composed">Build-Your-Own</option>
+            </select>
+          </div>
+
+          {/* Nutrition */}
+          <div>
+            <p className="text-xs text-brand-muted/50 mb-1.5">Nutrition</p>
+            <select
+              value={nutritionFilter}
+              onChange={e => setNutritionFilter(e.target.value)}
+              className="w-full bg-brand-bg border border-brand-muted/20 rounded-lg px-3 py-2 text-sm text-brand-muted focus:outline-none focus:border-brand-accent/60"
+            >
+              <option value="all">All</option>
+              <option value="complete">Complete</option>
+              <option value="partial">Partial</option>
+            </select>
+          </div>
+
+          {(activeTagFilters.length > 0 || typeFilter !== 'all' || nutritionFilter !== 'all') && (
+            <button
+              onClick={() => { setActiveTagFilters([]); setTypeFilter('all'); setNutritionFilter('all'); }}
+              className="text-xs text-brand-accent hover:text-brand-accent/80 transition-colors text-left"
+            >
+              Clear filters
             </button>
-          );
-        })}
+          )}
+        </div>
       </div>
     </div>
   );

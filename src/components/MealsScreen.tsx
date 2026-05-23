@@ -126,6 +126,153 @@ function FreshnessBar({ meal }: { meal: PreparedMeal }) {
 
 type MealFilter = 'all' | 'fridge' | 'frozen' | 'expiring' | 'unscheduled';
 
+// ── Meal card (shared between card and list views) ────────────
+function MealCard({
+  meal,
+  viewMode,
+  assignedCount,
+  onSchedule,
+  onRemove,
+  confirmRemoveId,
+  setConfirmRemoveId,
+}: {
+  meal: PreparedMeal;
+  viewMode: 'card' | 'list';
+  assignedCount: number;
+  onSchedule: () => void;
+  onRemove: () => void;
+  confirmRemoveId: string | null;
+  setConfirmRemoveId: (id: string | null) => void;
+}) {
+  const unassigned = meal.servingsRemaining - assignedCount;
+
+  if (viewMode === 'list') {
+    return (
+      <div className="bg-brand-surface rounded-lg border border-brand-raised/40 px-4 py-3 flex items-center gap-4">
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-brand-muted text-sm leading-tight truncate">{meal.recipeName}</p>
+          {meal.variantName && meal.variantName !== meal.recipeName && (
+            <p className="text-xs text-brand-muted/60 truncate">{meal.variantName}</p>
+          )}
+        </div>
+        <span className="text-xs text-brand-muted/40 shrink-0">
+          {meal.storage === 'refrigerated' ? 'Fridge' : 'Frozen'}
+        </span>
+        <span className="text-xs text-brand-muted/50 shrink-0">
+          {meal.servingsRemaining} srv
+        </span>
+        {meal.nutrientsPerServing && (
+          <span className="text-xs text-brand-muted/50 shrink-0">
+            {Math.round(meal.nutrientsPerServing.calories)} cal
+          </span>
+        )}
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={onSchedule}
+            disabled={unassigned <= 0}
+            className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${
+              unassigned > 0
+                ? 'bg-brand-accent text-white hover:bg-brand-accent/80'
+                : 'bg-brand-surface border border-brand-raised/30 text-brand-muted/25 cursor-not-allowed'
+            }`}
+          >
+            {unassigned > 0 ? 'Schedule' : 'Scheduled'}
+          </button>
+          {confirmRemoveId === meal.id ? (
+            <>
+              <button onClick={onRemove} className="text-xs text-red-400 px-2 py-1">Remove</button>
+              <button onClick={() => setConfirmRemoveId(null)} className="text-xs text-brand-muted/40 px-2 py-1">Cancel</button>
+            </>
+          ) : (
+            <button onClick={() => setConfirmRemoveId(meal.id)} className="text-brand-muted/30 hover:text-red-400 transition-colors text-sm px-1">×</button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-brand-surface rounded-lg border border-brand-raised/40 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-brand-muted text-sm leading-tight">{meal.recipeName}</p>
+          {meal.variantName && meal.variantName !== meal.recipeName && (
+            <p className="text-xs text-brand-muted/60 mt-0.5">{meal.variantName}</p>
+          )}
+        </div>
+        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-bg text-brand-muted shrink-0">
+          {meal.storage === 'refrigerated' ? '❄️ Fridge' : '🧊 Frozen'}
+        </span>
+      </div>
+
+      <div className="mt-3 space-y-1">
+        <div className="flex items-center gap-4 text-xs text-brand-muted/60">
+          <span>Prepped {formatDisplay(meal.prepDate)}</span>
+        </div>
+        <div className="flex items-center gap-4 text-xs">
+          <span className="text-brand-muted/60">Servings <span className="font-medium text-brand-muted">{meal.servingsRemaining}</span></span>
+          <span className={unassigned > 0 ? 'text-brand-muted/60' : 'text-brand-muted/30'}>
+            Unscheduled <span className={`font-medium ${unassigned > 0 ? 'text-brand-muted' : 'text-brand-muted/30'}`}>{unassigned}</span>
+          </span>
+        </div>
+        {meal.nutrientsPerServing && (
+          <div className="pt-1">
+            <p className="text-[10px] text-brand-muted/35 uppercase tracking-wide mb-0.5">Per serving</p>
+            <div className="flex items-center gap-3 text-xs text-brand-muted/50">
+              <span><span className="font-medium text-brand-muted">{Math.round(meal.nutrientsPerServing.calories)}</span> cal</span>
+              <span><span className="font-medium text-brand-muted">{Math.round(meal.nutrientsPerServing.protein)}g</span> protein</span>
+              <span><span className="font-medium text-brand-muted">{Math.round(meal.nutrientsPerServing.carbs)}g</span> carbs</span>
+              <span><span className="font-medium text-brand-muted">{Math.round(meal.nutrientsPerServing.fat)}g</span> fat</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <FreshnessBar meal={meal} />
+
+      <div className="flex gap-2 mt-3 pt-3 border-t border-brand-raised/30">
+        <button
+          onClick={onSchedule}
+          disabled={unassigned <= 0}
+          className={`flex-1 text-xs py-1.5 rounded-lg transition-colors font-medium ${
+            unassigned > 0
+              ? 'bg-brand-accent text-white hover:bg-brand-accent/80'
+              : 'bg-brand-surface border border-brand-raised/30 text-brand-muted/25 cursor-not-allowed'
+          }`}
+        >
+          {unassigned > 0 ? 'Schedule' : 'Fully Scheduled'}
+        </button>
+        {confirmRemoveId === meal.id ? (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-brand-muted/50">Remove?</span>
+            <button
+              onClick={onRemove}
+              className="px-3 py-1.5 text-sm font-medium text-red-400 border border-red-400/30 rounded-lg hover:bg-red-400/10 transition-colors"
+            >Remove</button>
+            <button
+              onClick={() => setConfirmRemoveId(null)}
+              className="px-3 py-1.5 text-sm text-brand-muted/50 border border-brand-muted/20 rounded-lg hover:text-brand-muted transition-colors"
+            >Cancel</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmRemoveId(meal.id)}
+            className="text-brand-muted/35 hover:text-red-400 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-red-400/10"
+            aria-label="Remove meal"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6M14 11v6" />
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+            </svg>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main screen ───────────────────────────────────────────────
 export default function MealsScreen() {
   const preparedMeals      = useAppStore((s) => s.preparedMeals);
@@ -136,6 +283,13 @@ export default function MealsScreen() {
   const [schedulingMeal, setSchedulingMeal] = useState<PreparedMeal | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<MealFilter>('all');
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const [sortMode, setSortMode] = useState<'urgency' | 'recent'>('urgency');
+
+  // Desktop sidebar filters
+  const [storageFilter, setStorageFilter] = useState('any');
+  const [freshnessFilter, setFreshnessFilter] = useState('any');
+  const [scheduleFilter, setScheduleFilter] = useState('any');
 
   const available      = preparedMeals.filter((m) => m.servingsRemaining > 0);
   const empty          = preparedMeals.filter((m) => m.servingsRemaining === 0);
@@ -152,16 +306,19 @@ export default function MealsScreen() {
     ? addDays(new Date(), coverageDays - 1).toLocaleDateString('en-US', { weekday: 'long' })
     : null;
 
-  const sortedAll = [...available].sort((a, b) => {
-    const order = { expired: 0, expiring: 1, fresh: 2 };
-    return order[getFreshnessStatus(a)] - order[getFreshnessStatus(b)];
-  });
-
   function assignedCount(mealId: string) {
     return scheduledMeals.filter((s) => s.preparedMealId === mealId).length;
   }
 
-  // Filter chips counts
+  const sortedAll = [...available].sort((a, b) => {
+    if (sortMode === 'urgency') {
+      const order = { expired: 0, expiring: 1, fresh: 2 };
+      return order[getFreshnessStatus(a)] - order[getFreshnessStatus(b)];
+    }
+    return new Date(b.prepDate).getTime() - new Date(a.prepDate).getTime();
+  });
+
+  // Filter chips counts (for mobile)
   const fridgeCount      = available.filter((m) => m.storage === 'refrigerated').length;
   const frozenCount      = available.filter((m) => m.storage === 'frozen').length;
   const expiringCount    = expiringSoon.length;
@@ -178,7 +335,8 @@ export default function MealsScreen() {
     { id: 'unscheduled', label: 'Unscheduled', count: unscheduledCount },
   ];
 
-  const sorted = sortedAll.filter((m) => {
+  // Apply mobile filter chips
+  const mobileFiltered = sortedAll.filter((m) => {
     if (activeFilter === 'all')         return true;
     if (activeFilter === 'fridge')      return m.storage === 'refrigerated';
     if (activeFilter === 'frozen')      return m.storage === 'frozen';
@@ -187,10 +345,24 @@ export default function MealsScreen() {
     return true;
   });
 
+  // Apply desktop sidebar filters
+  const desktopFiltered = sortedAll.filter((m) => {
+    if (storageFilter === 'fridge' && m.storage !== 'refrigerated') return false;
+    if (storageFilter === 'frozen' && m.storage !== 'frozen') return false;
+    const freshness = getFreshnessStatus(m);
+    if (freshnessFilter === 'fresh' && freshness !== 'fresh') return false;
+    if (freshnessFilter === 'expiring' && freshness !== 'expiring') return false;
+    if (freshnessFilter === 'expired' && freshness !== 'expired') return false;
+    if (scheduleFilter === 'unscheduled' && !(m.servingsRemaining - assignedCount(m.id) > 0)) return false;
+    if (scheduleFilter === 'scheduled' && m.servingsRemaining - assignedCount(m.id) > 0) return false;
+    return true;
+  });
+
   return (
     <div>
       <div className="mb-5">
-        <h2 className="text-lg font-semibold text-brand-muted">Meals Ready</h2>
+        <p className="text-[11px] font-semibold text-brand-accent uppercase tracking-widest mb-0.5">Meals Ready</p>
+        <h2 className="text-xl font-semibold text-brand-muted">Meals Ready</h2>
         <p className="text-sm text-brand-muted/50 mt-1">
           {available.length > 0
             ? `${available.length} prepared meal${available.length !== 1 ? 's' : ''} in inventory`
@@ -203,9 +375,52 @@ export default function MealsScreen() {
         )}
       </div>
 
-      {/* Filter chips toolbar — visible on desktop, scrollable on mobile */}
+      {/* Toolbar (view + sort) */}
       {available.length > 0 && (
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          {/* View toggle */}
+          <div className="flex bg-brand-surface rounded-lg border border-brand-muted/15 p-0.5">
+            <button
+              onClick={() => setViewMode('card')}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'card' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/40 hover:text-brand-muted/70'}`}
+              aria-label="Card view"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/40 hover:text-brand-muted/70'}`}
+              aria-label="List view"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          {/* Sort control */}
+          <div className="flex bg-brand-surface rounded-lg border border-brand-muted/15 p-0.5">
+            <button
+              onClick={() => setSortMode('urgency')}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${sortMode === 'urgency' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/40 hover:text-brand-muted/70'}`}
+            >
+              By urgency
+            </button>
+            <button
+              onClick={() => setSortMode('recent')}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${sortMode === 'recent' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/40 hover:text-brand-muted/70'}`}
+            >
+              By recent
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Filter chips toolbar — mobile only */}
+      {available.length > 0 && (
+        <div className="flex lg:hidden gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
           {filterChips.map((chip) => (
             <button
               key={chip.id}
@@ -225,133 +440,148 @@ export default function MealsScreen() {
         </div>
       )}
 
-      {expiringSoon.length > 0 && available.length > 0 && activeFilter === 'all' && (
-        <p className="text-[11px] text-brand-muted/35 mb-4">
+      {expiringSoon.length > 0 && available.length > 0 && sortMode === 'urgency' && (
+        <p className="text-[11px] text-brand-muted/35 mb-4 lg:hidden">
           Sorted by urgency — eat oldest meals first.
         </p>
       )}
 
-      {sorted.length === 0 && available.length === 0 && (
-        <div className="text-center py-16">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/20 mx-auto mb-4">
-            <path d="M21 8l-9-5-9 5v8l9 5 9-5V8z" />
-            <path d="M3 8l9 5 9-5" />
-            <path d="M12 13v8" />
-          </svg>
-          <p className="font-medium text-brand-muted/60">Inventory empty</p>
-          <p className="text-sm mt-1.5 text-brand-muted/40">
-            Log a prep session to add meals to your inventory.
-          </p>
-        </div>
-      )}
+      {/* ── Desktop 2-column layout ─────────────────────────── */}
+      <div className="lg:grid lg:grid-cols-[1fr_clamp(220px,18vw,260px)] lg:gap-8 lg:items-start">
 
-      {sorted.length === 0 && available.length > 0 && (
-        <div className="text-center py-10">
-          <p className="text-sm text-brand-muted/40">No meals match this filter.</p>
-        </div>
-      )}
+        {/* Main content column */}
+        <div>
+          {desktopFiltered.length === 0 && available.length === 0 && (
+            <div className="text-center py-16">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/20 mx-auto mb-4">
+                <path d="M21 8l-9-5-9 5v8l9 5 9-5V8z" />
+                <path d="M3 8l9 5 9-5" />
+                <path d="M12 13v8" />
+              </svg>
+              <p className="font-medium text-brand-muted/60">Inventory empty</p>
+              <p className="text-sm mt-1.5 text-brand-muted/40">
+                Log a prep session to add meals to your inventory.
+              </p>
+            </div>
+          )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        {sorted.map((meal) => {
-          const assigned = assignedCount(meal.id);
-          const unassigned = meal.servingsRemaining - assigned;
+          {desktopFiltered.length === 0 && available.length > 0 && (
+            <div className="text-center py-10">
+              <p className="text-sm text-brand-muted/40">No meals match this filter.</p>
+            </div>
+          )}
 
-          return (
-            <div key={meal.id} className="bg-brand-surface rounded-lg border border-brand-raised/40 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-brand-muted text-sm leading-tight">{meal.recipeName}</p>
-                  {meal.variantName && meal.variantName !== meal.recipeName && (
-                    <p className="text-xs text-brand-muted/60 mt-0.5">{meal.variantName}</p>
-                  )}
-                </div>
-                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-bg text-brand-muted shrink-0">
-                  {meal.storage === 'refrigerated' ? '❄️ Fridge' : '🧊 Frozen'}
-                </span>
+          {/* Desktop card grid */}
+          <div className={`hidden lg:block ${viewMode === 'card' ? 'grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3' : 'flex flex-col gap-1'}`}>
+            {desktopFiltered.map((meal) => (
+              <MealCard
+                key={meal.id}
+                meal={meal}
+                viewMode={viewMode}
+                assignedCount={assignedCount(meal.id)}
+                onSchedule={() => assignedCount(meal.id) < meal.servingsRemaining && setSchedulingMeal(meal)}
+                onRemove={() => { removePreparedMeal(meal.id); setConfirmRemoveId(null); }}
+                confirmRemoveId={confirmRemoveId}
+                setConfirmRemoveId={setConfirmRemoveId}
+              />
+            ))}
+          </div>
+
+          {/* Mobile grid (unchanged filter logic) */}
+          <div className="lg:hidden">
+            {mobileFiltered.length === 0 && available.length > 0 && (
+              <div className="text-center py-10">
+                <p className="text-sm text-brand-muted/40">No meals match this filter.</p>
               </div>
+            )}
+            <div className="grid grid-cols-1 gap-3">
+              {mobileFiltered.map((meal) => (
+                <MealCard
+                  key={meal.id}
+                  meal={meal}
+                  viewMode="card"
+                  assignedCount={assignedCount(meal.id)}
+                  onSchedule={() => assignedCount(meal.id) < meal.servingsRemaining && setSchedulingMeal(meal)}
+                  onRemove={() => { removePreparedMeal(meal.id); setConfirmRemoveId(null); }}
+                  confirmRemoveId={confirmRemoveId}
+                  setConfirmRemoveId={setConfirmRemoveId}
+                />
+              ))}
+            </div>
+          </div>
 
-              <div className="mt-3 space-y-1">
-                <div className="flex items-center gap-4 text-xs text-brand-muted/60">
-                  <span>Prepped {formatDisplay(meal.prepDate)}</span>
-                </div>
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="text-brand-muted/60">Servings <span className="font-medium text-brand-muted">{meal.servingsRemaining}</span></span>
-                  <span className={unassigned > 0 ? 'text-brand-muted/60' : 'text-brand-muted/30'}>
-                    Unscheduled <span className={`font-medium ${unassigned > 0 ? 'text-brand-muted' : 'text-brand-muted/30'}`}>{unassigned}</span>
-                  </span>
-                </div>
-                {meal.nutrientsPerServing && (
-                  <div className="pt-1">
-                    <p className="text-[10px] text-brand-muted/35 uppercase tracking-wide mb-0.5">Per serving</p>
-                    <div className="flex items-center gap-3 text-xs text-brand-muted/50">
-                      <span><span className="font-medium text-brand-muted">{Math.round(meal.nutrientsPerServing.calories)}</span> cal</span>
-                      <span><span className="font-medium text-brand-muted">{Math.round(meal.nutrientsPerServing.protein)}g</span> protein</span>
-                      <span><span className="font-medium text-brand-muted">{Math.round(meal.nutrientsPerServing.carbs)}g</span> carbs</span>
-                      <span><span className="font-medium text-brand-muted">{Math.round(meal.nutrientsPerServing.fat)}g</span> fat</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <FreshnessBar meal={meal} />
-
-              <div className="flex gap-2 mt-3 pt-3 border-t border-brand-raised/30">
-                <button
-                  onClick={() => unassigned > 0 && setSchedulingMeal(meal)}
-                  disabled={unassigned <= 0}
-                  className={`flex-1 text-xs py-1.5 rounded-lg transition-colors font-medium ${
-                    unassigned > 0
-                      ? 'bg-brand-accent text-white hover:bg-brand-accent/80'
-                      : 'bg-brand-surface border border-brand-raised/30 text-brand-muted/25 cursor-not-allowed'
-                  }`}
-                >
-                  {unassigned > 0 ? 'Schedule' : 'Fully Scheduled'}
-                </button>
-                {confirmRemoveId === meal.id ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-brand-muted/50">Remove meal?</span>
-                    <button
-                      onClick={() => { removePreparedMeal(meal.id); setConfirmRemoveId(null); }}
-                      className="px-3 py-1.5 text-sm font-medium text-red-400 border border-red-400/30 rounded-lg hover:bg-red-400/10 transition-colors"
-                    >Remove</button>
-                    <button
-                      onClick={() => setConfirmRemoveId(null)}
-                      className="px-3 py-1.5 text-sm text-brand-muted/50 border border-brand-muted/20 rounded-lg hover:text-brand-muted transition-colors"
-                    >Cancel</button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setConfirmRemoveId(meal.id)}
-                    className="text-brand-muted/35 hover:text-red-400 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-red-400/10"
-                    aria-label="Remove meal"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                      <path d="M10 11v6M14 11v6" />
-                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                    </svg>
+          {empty.length > 0 && (
+            <div className="mt-6">
+              <p className="text-xs text-brand-muted/30 uppercase tracking-widest font-semibold mb-2">Used Up</p>
+              {empty.map((meal) => (
+                <div key={meal.id} className="flex items-center justify-between py-2 px-3 bg-brand-surface/40 rounded-lg mb-1.5 opacity-50">
+                  <p className="text-sm text-brand-muted">{meal.recipeName}</p>
+                  <button onClick={() => removePreparedMeal(meal.id)} className="text-xs text-brand-muted/40 hover:text-red-400 transition-colors">
+                    Remove
                   </button>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
-          );
-        })}
-      </div>
-
-      {empty.length > 0 && (
-        <div className="mt-6">
-          <p className="text-xs text-brand-muted/30 uppercase tracking-widest font-semibold mb-2">Used Up</p>
-          {empty.map((meal) => (
-            <div key={meal.id} className="flex items-center justify-between py-2 px-3 bg-brand-surface/40 rounded-lg mb-1.5 opacity-50">
-              <p className="text-sm text-brand-muted">{meal.recipeName}</p>
-              <button onClick={() => removePreparedMeal(meal.id)} className="text-xs text-brand-muted/40 hover:text-red-400 transition-colors">
-                Remove
-              </button>
-            </div>
-          ))}
+          )}
         </div>
-      )}
+
+        {/* Desktop filter sidebar */}
+        <div className="hidden lg:block sticky top-6 bg-brand-surface border border-brand-muted/10 rounded-xl p-4 flex flex-col gap-4 space-y-4">
+          <p className="text-xs font-semibold text-brand-muted/50 uppercase tracking-wide">Filter</p>
+
+          {/* Storage */}
+          <div>
+            <label className="block text-xs text-brand-muted/50 mb-1.5">Storage</label>
+            <select
+              value={storageFilter}
+              onChange={(e) => setStorageFilter(e.target.value)}
+              className="w-full bg-brand-bg border border-brand-muted/20 rounded-lg px-3 py-2 text-sm text-brand-muted focus:outline-none focus:border-brand-accent/60"
+            >
+              <option value="any">Any</option>
+              <option value="fridge">Fridge</option>
+              <option value="frozen">Frozen</option>
+            </select>
+          </div>
+
+          {/* Freshness */}
+          <div>
+            <label className="block text-xs text-brand-muted/50 mb-1.5">Freshness</label>
+            <select
+              value={freshnessFilter}
+              onChange={(e) => setFreshnessFilter(e.target.value)}
+              className="w-full bg-brand-bg border border-brand-muted/20 rounded-lg px-3 py-2 text-sm text-brand-muted focus:outline-none focus:border-brand-accent/60"
+            >
+              <option value="any">Any</option>
+              <option value="fresh">Fresh</option>
+              <option value="expiring">Expiring soon</option>
+              <option value="expired">Expired</option>
+            </select>
+          </div>
+
+          {/* Schedule status */}
+          <div>
+            <label className="block text-xs text-brand-muted/50 mb-1.5">Schedule</label>
+            <select
+              value={scheduleFilter}
+              onChange={(e) => setScheduleFilter(e.target.value)}
+              className="w-full bg-brand-bg border border-brand-muted/20 rounded-lg px-3 py-2 text-sm text-brand-muted focus:outline-none focus:border-brand-accent/60"
+            >
+              <option value="any">Any</option>
+              <option value="unscheduled">Unscheduled</option>
+              <option value="scheduled">Fully scheduled</option>
+            </select>
+          </div>
+
+          {(storageFilter !== 'any' || freshnessFilter !== 'any' || scheduleFilter !== 'any') && (
+            <button
+              onClick={() => { setStorageFilter('any'); setFreshnessFilter('any'); setScheduleFilter('any'); }}
+              className="text-xs text-brand-accent hover:text-brand-accent/80 transition-colors text-left"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      </div>
 
       {schedulingMeal && (
         <ScheduleModal meal={schedulingMeal} onClose={() => setSchedulingMeal(null)} />

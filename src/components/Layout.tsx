@@ -76,18 +76,6 @@ function RecipesIcon() {
   );
 }
 
-// Sprig SVG for sidebar brand
-function SprigIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-accent flex-shrink-0">
-      <path d="M12 21 V13" />
-      <path d="M12 16 C10 14 7 14 5 15 C6 18 9 18 12 16Z" />
-      <path d="M12 13 C14 11 17 11 19 12 C18 15 15 15 12 13Z" />
-      <path d="M12 13 C12 11 13 9 12 7" />
-    </svg>
-  );
-}
-
 const navTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'plan',     label: 'Plan',     icon: <PlanIcon /> },
   { id: 'prep',     label: 'Prep',     icon: <PrepIcon /> },
@@ -109,9 +97,17 @@ function DesktopSidebar({ activeTab, onTabChange }: { activeTab: Tab; onTabChang
   return (
     <aside className="hidden lg:flex flex-col w-[232px] shrink-0 sticky top-0 h-screen bg-brand-surface border-r border-brand-muted/10">
       {/* Brand */}
-      <div className="flex items-center gap-2 px-5 py-5 border-b border-brand-muted/10">
-        <SprigIcon />
-        <span className="text-lg font-semibold text-brand-muted tracking-tight">FreshPrep</span>
+      <div
+        className="flex items-center gap-2 px-5 py-5 border-b border-black/20"
+        style={{ background: 'linear-gradient(180deg, rgb(38 76 52) 0%, rgb(30 60 40) 60%, rgb(24 50 34) 100%)' }}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-accent flex-shrink-0">
+          <path d="M12 21 V13" />
+          <path d="M12 16 C10 14 7 14 5 15 C6 18 9 18 12 16Z" />
+          <path d="M12 13 C14 11 17 11 19 12 C18 15 15 15 12 13Z" />
+          <path d="M12 13 C12 11 13 9 12 7" />
+        </svg>
+        <span className="text-lg font-semibold text-white tracking-tight">FreshPrep</span>
       </div>
 
       {/* Nav items */}
