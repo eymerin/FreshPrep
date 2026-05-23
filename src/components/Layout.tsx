@@ -3,7 +3,7 @@ import NotificationCenter from './NotificationCenter';
 import ProfileScreen from './ProfileScreen';
 import { useAppStore } from '../store';
 
-type Tab = 'plan' | 'prep' | 'schedule' | 'meals' | 'recipes';
+type Tab = 'plan' | 'prep' | 'schedule' | 'meals' | 'recipes' | 'profile';
 
 interface LayoutProps {
   activeTab: Tab;
@@ -76,13 +76,119 @@ function RecipesIcon() {
   );
 }
 
-const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+// Sprig SVG for sidebar brand
+function SprigIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-accent flex-shrink-0">
+      <path d="M12 21 V13" />
+      <path d="M12 16 C10 14 7 14 5 15 C6 18 9 18 12 16Z" />
+      <path d="M12 13 C14 11 17 11 19 12 C18 15 15 15 12 13Z" />
+      <path d="M12 13 C12 11 13 9 12 7" />
+    </svg>
+  );
+}
+
+const navTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'plan',     label: 'Plan',     icon: <PlanIcon /> },
   { id: 'prep',     label: 'Prep',     icon: <PrepIcon /> },
   { id: 'schedule', label: 'Schedule', icon: <CalendarIcon /> },
   { id: 'meals',    label: 'Ready',    icon: <MealsIcon /> },
   { id: 'recipes',  label: 'Recipes',  icon: <RecipesIcon /> },
 ];
+
+// ── Desktop Sidebar ───────────────────────────────────────────
+function DesktopSidebar({ activeTab, onTabChange }: { activeTab: Tab; onTabChange: (tab: Tab) => void }) {
+  const unreadCount    = useAppStore((s) => s.appNotifications.filter(n => !n.read).length);
+  const userProfile    = useAppStore((s) => s.userProfile);
+  const mealsEatenAllTime = useAppStore((s) => s.mealsEatenAllTime);
+
+  const initials = userProfile.name.trim()
+    ? userProfile.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
+
+  return (
+    <aside className="hidden lg:flex flex-col w-[232px] shrink-0 sticky top-0 h-screen bg-brand-surface border-r border-brand-muted/10">
+      {/* Brand */}
+      <div className="flex items-center gap-2 px-5 py-5 border-b border-brand-muted/10">
+        <SprigIcon />
+        <span className="text-lg font-semibold text-brand-muted tracking-tight">FreshPrep</span>
+      </div>
+
+      {/* Nav items */}
+      <nav className="flex-1 px-3 py-4 space-y-0.5">
+        {navTabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left ${
+                isActive
+                  ? 'text-brand-accent'
+                  : 'text-brand-muted/50 hover:text-brand-muted/80 hover:bg-brand-muted/5'
+              }`}
+            >
+              <span className={`flex items-center justify-center w-9 h-8 rounded-xl transition-colors ${
+                isActive ? 'bg-brand-accent/15 text-brand-accent' : 'text-brand-muted/40'
+              }`}>
+                {tab.icon}
+              </span>
+              <span className={`text-sm font-medium ${isActive ? 'text-brand-accent' : ''}`}>
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Bottom section */}
+      <div className="px-3 pb-4 space-y-1 border-t border-brand-muted/10 pt-3">
+        {/* Alerts row */}
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-brand-muted/50">
+          <span className="relative flex items-center justify-center w-9 h-8">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-warm text-brand-bg text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </span>
+          <span className="text-sm font-medium">Alerts</span>
+          {unreadCount > 0 && (
+            <span className="ml-auto text-xs font-semibold text-brand-warm">{unreadCount}</span>
+          )}
+        </div>
+
+        {/* Profile row */}
+        <button
+          onClick={() => onTabChange('profile')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left ${
+            activeTab === 'profile'
+              ? 'text-brand-accent'
+              : 'text-brand-muted/50 hover:text-brand-muted/80 hover:bg-brand-muted/5'
+          }`}
+        >
+          <div className="w-9 h-8 flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-full bg-brand-accent flex items-center justify-center text-xs font-semibold text-white">
+              {initials}
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-medium truncate ${activeTab === 'profile' ? 'text-brand-accent' : ''}`}>
+              {userProfile.name || 'Profile'}
+            </p>
+            <p className="text-[11px] text-brand-muted/35 leading-none mt-0.5">
+              {mealsEatenAllTime} meals eaten
+            </p>
+          </div>
+        </button>
+      </div>
+    </aside>
+  );
+}
 
 export default function Layout({ activeTab, onTabChange, children }: LayoutProps) {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -98,80 +204,88 @@ export default function Layout({ activeTab, onTabChange, children }: LayoutProps
   }, [insightsTipSeen, markInsightsTipSeen]);
 
   return (
-    <div className="min-h-screen bg-brand-bg flex flex-col">
-      <header className="bg-brand-raised border-b border-brand-muted/15 px-4 py-3 flex items-center justify-between">
-        {/* Alerts bell — left corner, balances Stats on right */}
-        <button
-          onClick={() => setShowNotifications(true)}
-          className="relative flex flex-col items-center gap-0.5 text-brand-muted/60 hover:text-brand-muted/90 transition-colors px-1 py-0.5 rounded-md min-w-[44px] min-h-[44px] justify-center"
-          aria-label="Notifications"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-          </svg>
-          <span className="text-[9px] font-medium uppercase tracking-wide leading-none">Alerts</span>
-          {unreadCount > 0 && (
-            <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-brand-warm text-brand-bg text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )}
-        </button>
+    <div className="min-h-screen bg-brand-bg lg:flex lg:max-w-[1280px] lg:mx-auto">
+      {/* Desktop sidebar */}
+      <DesktopSidebar activeTab={activeTab} onTabChange={onTabChange} />
 
-        <div className="flex items-center gap-1.5">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/70 flex-shrink-0">
-            <path d="M12 21 V13" />
-            <path d="M12 16 C10 14 7 14 5 15 C6 18 9 18 12 16Z" />
-            <path d="M12 13 C14 11 17 11 19 12 C18 15 15 15 12 13Z" />
-            <path d="M12 13 C12 11 13 9 12 7" />
-          </svg>
-          <h1 className="text-xl font-semibold text-brand-muted tracking-tight">FreshPrep</h1>
-        </div>
+      {/* Main content column */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile header — hidden on desktop */}
+        <header className="lg:hidden bg-brand-raised border-b border-brand-muted/15 px-4 py-3 flex items-center justify-between">
+          {/* Alerts bell */}
+          <button
+            onClick={() => setShowNotifications(true)}
+            className="relative flex flex-col items-center gap-0.5 text-brand-muted/60 hover:text-brand-muted/90 transition-colors px-1 py-0.5 rounded-md min-w-[44px] min-h-[44px] justify-center"
+            aria-label="Notifications"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span className="text-[9px] font-medium uppercase tracking-wide leading-none">Alerts</span>
+            {unreadCount > 0 && (
+              <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-brand-warm text-brand-bg text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
 
-        {/* Profile icon button — matches tab icon style */}
-        <button
-          onClick={() => setShowProfile(true)}
-          className="flex flex-col items-center gap-0.5 text-brand-muted/60 hover:text-brand-muted/90 transition-colors px-1 py-0.5 rounded-md min-w-[44px] min-h-[44px] justify-center"
-          aria-label="Profile"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-          </svg>
-          <span className="text-[9px] font-medium uppercase tracking-wide leading-none">Profile</span>
-        </button>
-      </header>
-      {showNotifications && <NotificationCenter onClose={() => setShowNotifications(false)} onNavigate={(tab) => { setShowNotifications(false); onTabChange(tab as any); }} />}
-      {showProfile && <ProfileScreen onClose={() => setShowProfile(false)} />}
+          <div className="flex items-center gap-1.5">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/70 flex-shrink-0">
+              <path d="M12 21 V13" />
+              <path d="M12 16 C10 14 7 14 5 15 C6 18 9 18 12 16Z" />
+              <path d="M12 13 C14 11 17 11 19 12 C18 15 15 15 12 13Z" />
+              <path d="M12 13 C12 11 13 9 12 7" />
+            </svg>
+            <h1 className="text-xl font-semibold text-brand-muted tracking-tight">FreshPrep</h1>
+          </div>
 
-      <main className="flex-1 p-6 max-w-4xl mx-auto w-full pb-24">{children}</main>
+          {/* Profile icon button */}
+          <button
+            onClick={() => setShowProfile(true)}
+            className="flex flex-col items-center gap-0.5 text-brand-muted/60 hover:text-brand-muted/90 transition-colors px-1 py-0.5 rounded-md min-w-[44px] min-h-[44px] justify-center"
+            aria-label="Profile"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+            </svg>
+            <span className="text-[9px] font-medium uppercase tracking-wide leading-none">Profile</span>
+          </button>
+        </header>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-brand-surface border-t border-brand-muted/15">
-        <div className="flex max-w-4xl mx-auto">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onTabChange(tab.id)}
-                className="flex-1 flex flex-col items-center py-2 gap-0.5 transition-colors"
-              >
-                {/* Pill background — non-color active indicator (satisfies WCAG 1.4.1) */}
-                <span className={`flex items-center justify-center w-11 h-8 rounded-xl transition-colors ${
-                  isActive ? 'bg-brand-accent/15 text-brand-accent' : 'text-brand-muted/40'
-                }`}>
-                  {tab.icon}
-                </span>
-                <span className={`text-[10px] transition-colors leading-tight ${
-                  isActive ? 'text-brand-accent font-semibold' : 'text-brand-muted/40 font-medium'
-                }`}>
-                  {tab.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+        {showNotifications && <NotificationCenter onClose={() => setShowNotifications(false)} onNavigate={(tab) => { setShowNotifications(false); onTabChange(tab as Tab); }} />}
+        {showProfile && <ProfileScreen onClose={() => setShowProfile(false)} />}
+
+        <main className="flex-1 p-6 pb-24 w-full lg:p-10 lg:pb-10 lg:max-w-none">{children}</main>
+
+        {/* Mobile bottom nav — hidden on desktop */}
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-brand-surface border-t border-brand-muted/15">
+          <div className="flex max-w-4xl mx-auto">
+            {navTabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => onTabChange(tab.id)}
+                  className="flex-1 flex flex-col items-center py-2 gap-0.5 transition-colors"
+                >
+                  <span className={`flex items-center justify-center w-11 h-8 rounded-xl transition-colors ${
+                    isActive ? 'bg-brand-accent/15 text-brand-accent' : 'text-brand-muted/40'
+                  }`}>
+                    {tab.icon}
+                  </span>
+                  <span className={`text-[10px] transition-colors leading-tight ${
+                    isActive ? 'text-brand-accent font-semibold' : 'text-brand-muted/40 font-medium'
+                  }`}>
+                    {tab.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
     </div>
   );
 }

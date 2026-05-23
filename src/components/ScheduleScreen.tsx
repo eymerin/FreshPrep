@@ -542,27 +542,136 @@ function WeeklyView() {
   );
 }
 
+// ── Desktop inventory + alerts rail ──────────────────────────
+function DesktopInventoryRail({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
+  const preparedMeals     = useAppStore((s) => s.preparedMeals);
+  const appNotifications  = useAppStore((s) => s.appNotifications);
+  const getDaysRemaining  = useAppStore((s) => s.getDaysRemaining);
+
+  const available = preparedMeals
+    .filter((m) => m.servingsRemaining > 0)
+    .sort((a, b) => getDaysRemaining(a) - getDaysRemaining(b))
+    .slice(0, 4);
+
+  const unread = appNotifications.filter((n) => !n.read);
+
+  return (
+    <div className="hidden lg:flex flex-col gap-5 sticky top-6">
+      {/* Inventory rail */}
+      <div className="bg-brand-surface rounded-xl border border-brand-muted/15 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-brand-muted/10">
+          <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide">Inventory</p>
+          <button
+            onClick={() => onNavigate('prep')}
+            className="text-xs text-brand-accent font-medium hover:text-brand-accent/80 transition-colors"
+          >
+            + Log prep
+          </button>
+        </div>
+
+        {available.length === 0 ? (
+          <div className="px-4 py-6 text-center">
+            <p className="text-sm text-brand-muted/40">No meals in inventory</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-brand-muted/10">
+            {available.map((meal) => {
+              const days = getDaysRemaining(meal);
+              const isExpiring = days <= 2;
+              const barColor = isExpiring ? 'bg-amber-400' : 'bg-emerald-500';
+              const shelfLife = meal.storage === 'refrigerated' ? 4 : 90;
+              const pct = Math.max(0, Math.min(100, (days / shelfLife) * 100));
+              return (
+                <div key={meal.id} className="px-4 py-3">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className="text-sm font-medium text-brand-muted leading-tight truncate flex-1">{meal.recipeName}</p>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
+                      meal.storage === 'refrigerated'
+                        ? 'bg-brand-slate/20 text-brand-slate'
+                        : 'bg-brand-raised text-brand-muted/50'
+                    }`}>
+                      {meal.storage === 'refrigerated' ? 'Fridge' : 'Frozen'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs text-brand-muted/50">{meal.servingsRemaining} serving{meal.servingsRemaining !== 1 ? 's' : ''}</p>
+                    <p className={`text-[11px] font-medium ${isExpiring ? 'text-amber-400' : 'text-brand-muted/40'}`}>
+                      {days > 0 ? `${days}d left` : 'Expired'}
+                    </p>
+                  </div>
+                  <div className="h-1 bg-brand-bg rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="px-4 py-2.5 border-t border-brand-muted/10">
+          <button
+            onClick={() => onNavigate('meals')}
+            className="text-xs text-brand-accent font-medium hover:text-brand-accent/80 transition-colors"
+          >
+            View all in Ready
+          </button>
+        </div>
+      </div>
+
+      {/* Alerts rail */}
+      {unread.length > 0 && (
+        <div className="bg-brand-surface rounded-xl border border-brand-muted/15 overflow-hidden">
+          <div className="px-4 py-3 border-b border-brand-muted/10">
+            <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide">Alerts</p>
+          </div>
+          <div className="divide-y divide-brand-muted/10">
+            {unread.map((n) => (
+              <div key={n.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                <p className={`text-sm leading-snug flex-1 ${n.type === 'expiry' ? 'text-amber-400' : 'text-brand-muted/70'}`}>
+                  {n.title}
+                </p>
+                <button
+                  onClick={() => onNavigate('plan')}
+                  className="text-xs text-brand-accent font-medium shrink-0 hover:text-brand-accent/80 transition-colors"
+                >
+                  Plan
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ScheduleScreen({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
   const subTab = useAppStore((s) => s.calendarSubTab);
   const setSubTab = useAppStore((s) => s.setCalendarSubTab);
   return (
-    <div>
-      <div className="flex bg-brand-surface rounded-lg border border-brand-muted/15 p-1 mb-5">
-        <button
-          onClick={() => setSubTab('daily')}
-          className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${subTab === 'daily' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'}`}
-        >
-          Daily
-        </button>
-        <button
-          onClick={() => setSubTab('weekly')}
-          className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${subTab === 'weekly' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'}`}
-        >
-          Weekly
-        </button>
+    <div className="lg:grid lg:grid-cols-[1fr_312px] lg:gap-10 lg:items-start">
+      {/* Left column: schedule content */}
+      <div>
+        <div className="flex bg-brand-surface rounded-lg border border-brand-muted/15 p-1 mb-5">
+          <button
+            onClick={() => setSubTab('daily')}
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${subTab === 'daily' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'}`}
+          >
+            Daily
+          </button>
+          <button
+            onClick={() => setSubTab('weekly')}
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${subTab === 'weekly' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'}`}
+          >
+            Weekly
+          </button>
+        </div>
+        {subTab === 'daily' && <DailyView onNavigate={onNavigate} />}
+        {subTab === 'weekly' && <WeeklyView />}
       </div>
-      {subTab === 'daily' && <DailyView onNavigate={onNavigate} />}
-      {subTab === 'weekly' && <WeeklyView />}
+
+      {/* Right column: desktop-only rails */}
+      <DesktopInventoryRail onNavigate={onNavigate} />
     </div>
   );
 }

@@ -1907,7 +1907,7 @@ function RecipeList({ onSelect }: { onSelect: (id: string) => void }) {
         <p className="text-sm text-brand-muted/40 text-center py-10">No recipes match your search.</p>
       )}
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {visibleRecipes.map((recipe) => {
           const { linked, total } = recipe.type === 'standard' ? ingredientNutritionCoverage(recipe) : { linked: 0, total: 0 };
           const displayTags = recipe.tags?.slice(0, 3) ?? [];

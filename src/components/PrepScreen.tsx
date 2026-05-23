@@ -131,15 +131,112 @@ function PendingCard({ pending }: { pending: PendingPrep }) {
   );
 }
 
+// ── Success card (shared between mobile and desktop) ──────────
+function SuccessCard({ onDismiss }: { onDismiss: () => void }) {
+  const preparedMeals      = useAppStore((s) => s.preparedMeals);
+  const prepSessionsLogged = useAppStore((s) => s.prepSessionsLogged);
+  const mealEatenDates     = useAppStore((s) => s.mealEatenDates);
+  const userPrefs          = useAppStore((s) => s.userPrefs);
+
+  const available = preparedMeals.filter((m) => m.servingsRemaining > 0).length;
+  const streak    = computeWeekStreak(mealEatenDates);
+
+  const mealsPerDay   = userPrefs ? userPrefs.mealsPerWeek / 7 : 1;
+  const coverageDays  = available > 0 ? Math.round(available / mealsPerDay) : 0;
+  const setForWeek    = coverageDays >= 7;
+  const coverageLabel = (!setForWeek && coverageDays > 0)
+    ? addDays(new Date(), coverageDays - 1).toLocaleDateString('en-US', { weekday: 'long' })
+    : null;
+  const coverageLine = setForWeek
+    ? "You're set for the week."
+    : coverageLabel
+    ? `Covered through ${coverageLabel}.`
+    : null;
+
+  return (
+    <div className="mb-5 bg-brand-surface rounded-xl border border-brand-accent/25 p-4 cursor-pointer" onClick={onDismiss}>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <p className="text-base font-semibold text-brand-muted leading-snug">
+            {available} meal{available !== 1 ? 's' : ''} ready.
+          </p>
+          {coverageLine && (
+            <p className="text-sm text-brand-muted/50 mt-0.5">{coverageLine}</p>
+          )}
+        </div>
+        <div className="w-7 h-7 rounded-full bg-brand-accent/20 border border-brand-accent/30 flex items-center justify-center shrink-0 mt-0.5">
+          <span className="text-brand-accent text-xs font-bold">✓</span>
+        </div>
+      </div>
+      <div className="flex gap-2 mb-2.5">
+        <div className="flex-1 bg-brand-bg rounded-lg px-3 py-2.5">
+          <p className="text-[11px] text-brand-muted/40 mb-1">In inventory</p>
+          <p className="text-sm font-semibold text-brand-muted leading-none">{available}</p>
+        </div>
+        {streak > 0 && (
+          <div className="flex-1 bg-brand-bg rounded-lg px-3 py-2.5">
+            <p className="text-[11px] text-brand-muted/40 mb-1">Streak</p>
+            <p className="text-sm font-semibold text-brand-muted leading-none">{streak} wk{streak !== 1 ? 's' : ''}</p>
+          </div>
+        )}
+        <div className="flex-1 bg-brand-bg rounded-lg px-3 py-2.5">
+          <p className="text-[11px] text-brand-muted/40 mb-1">Session</p>
+          <p className="text-sm font-semibold text-brand-muted leading-none">#{prepSessionsLogged}</p>
+        </div>
+      </div>
+      {streak >= 2 && <p className="text-xs text-brand-accent/70">{streak}-week consistency streak.</p>}
+      {streak === 1 && <p className="text-xs text-brand-muted/40">First week active. Keep going.</p>}
+      {streak === 0 && prepSessionsLogged === 1 && <p className="text-xs text-brand-muted/40">Head to Calendar to schedule your meals.</p>}
+    </div>
+  );
+}
+
+// ── Desktop right col: Just Prepped + recent sessions ─────────
+function JustPreppedRail() {
+  const preparedMeals = useAppStore((s) => s.preparedMeals);
+  const { formatDisplay } = { formatDisplay: (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
+
+  const recent = [...preparedMeals]
+    .sort((a, b) => new Date(b.prepDate).getTime() - new Date(a.prepDate).getTime())
+    .slice(0, 3);
+
+  return (
+    <div className="hidden lg:block sticky top-6">
+      <div className="bg-brand-surface rounded-xl border border-brand-muted/15 overflow-hidden">
+        <div className="px-4 py-3 border-b border-brand-muted/10">
+          <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide">Just Prepped</p>
+        </div>
+        {recent.length === 0 ? (
+          <div className="px-4 py-6 text-center">
+            <p className="text-sm text-brand-muted/40">No sessions yet</p>
+            <p className="text-xs text-brand-muted/30 mt-1">Log your first prep session</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-brand-muted/10">
+            {recent.map((meal) => (
+              <div key={meal.id} className="px-4 py-3">
+                <p className="text-sm font-medium text-brand-muted leading-tight truncate">{meal.recipeName}</p>
+                {meal.variantName && meal.variantName !== meal.recipeName && (
+                  <p className="text-xs text-brand-muted/50 truncate">{meal.variantName}</p>
+                )}
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-brand-muted/40">{formatDisplay(meal.prepDate)}</p>
+                  <p className="text-xs text-brand-muted/50">{meal.servingsRemaining} left</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Manual log form ───────────────────────────────────────────
 export default function PrepScreen() {
   const recipes            = useAppStore((s) => s.recipes);
   const logPrepEvent       = useAppStore((s) => s.logPrepEvent);
   const pendingPreps       = useAppStore((s) => s.pendingPreps);
-  const preparedMeals      = useAppStore((s) => s.preparedMeals);
-  const prepSessionsLogged = useAppStore((s) => s.prepSessionsLogged);
-  const mealEatenDates     = useAppStore((s) => s.mealEatenDates);
-  const userPrefs          = useAppStore((s) => s.userPrefs);
 
   const [recipeId, setRecipeId] = useState('');
   const [variantId, setVariantId] = useState('');
@@ -172,9 +269,85 @@ export default function PrepScreen() {
     setTimeout(() => setSuccess(false), 5000);
   }
 
+  const manualForm = (
+    <form onSubmit={handleSubmit} className="bg-brand-surface rounded-lg border border-brand-muted/15 p-6 space-y-5">
+      <div>
+        <label className="block text-sm font-medium text-brand-muted/70 mb-1.5">Recipe</label>
+        <select value={recipeId} onChange={(e) => handleRecipeChange(e.target.value)} required className={inputClass}>
+          <option value="">Select a recipe...</option>
+          {recipes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+        </select>
+      </div>
+
+      {recipe && isComposed && recipe.slots?.map((slot) => (
+        <div key={slot.id}>
+          <label className="block text-sm font-medium text-brand-muted/70 mb-2">{slot.label}</label>
+          <div className="flex flex-wrap gap-2">
+            {slot.options.map((opt) => (
+              <button key={opt.name} type="button" onClick={() => pickSlot(slot.id, opt.name)}
+                className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${slotPicks[slot.id] === opt.name ? 'bg-brand-accent text-white border-brand-accent' : 'bg-brand-bg text-brand-muted/60 border-brand-muted/20 hover:border-brand-accent/50'}`}>
+                {opt.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {recipe && !isComposed && recipe.variants.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-brand-muted/70 mb-1.5">Variant</label>
+          <select value={variantId} onChange={(e) => setVariantId(e.target.value)} required className={inputClass}>
+            <option value="">Select a variant...</option>
+            {recipe.variants.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+          </select>
+        </div>
+      )}
+
+      {recipe && isComposed && allSlotsPicked && (
+        <div className="px-3 py-2 bg-brand-bg rounded-lg border border-brand-muted/10">
+          <p className="text-xs text-brand-muted/40 mb-1">Your plate</p>
+          <p className="text-sm text-brand-muted/80">{(recipe.slots || []).map((s) => slotPicks[s.id]).filter(Boolean).join(' · ')}</p>
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium text-brand-muted/70 mb-1.5">Servings</label>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => setServings((s) => Math.max(1, s - 1))} className="w-8 h-8 rounded-full border border-brand-muted/20 text-brand-muted/60 hover:border-brand-accent hover:text-brand-accent flex items-center justify-center text-lg font-light transition-colors">−</button>
+          <span className="text-lg font-semibold text-brand-muted w-8 text-center">{servings}</span>
+          <button type="button" onClick={() => setServings((s) => s + 1)} className="w-8 h-8 rounded-full border border-brand-muted/20 text-brand-muted/60 hover:border-brand-accent hover:text-brand-accent flex items-center justify-center text-lg font-light transition-colors">+</button>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-brand-muted/70 mb-1.5">Prep Date</label>
+        <input type="date" value={prepDate} onChange={(e) => setPrepDate(e.target.value)} required className={inputClass} />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-brand-muted/70 mb-2">Storage</label>
+        <div className="flex gap-3">
+          {(['refrigerated', 'frozen'] as StorageType[]).map((type) => (
+            <button key={type} type="button" onClick={() => setStorage(type)}
+              className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ${storage === type ? 'bg-brand-slate text-white border-brand-slate' : 'bg-brand-bg text-brand-muted/60 border-brand-muted/20 hover:border-brand-slate/50'}`}>
+              {type === 'refrigerated' ? 'Refrigerated' : 'Frozen'}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-brand-muted/30 mt-2">{storage === 'refrigerated' ? 'Fresh for 4 days' : 'Fresh for 90 days'}</p>
+      </div>
+
+      <button type="submit" disabled={!canSubmit} className="w-full bg-brand-accent text-white py-2.5 rounded-lg text-sm font-medium hover:bg-brand-accent/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+        Log Prep Session
+      </button>
+    </form>
+  );
+
+  // ── Mobile layout ─────────────────────────────────────────
+  // ── Desktop layout: 3 columns ─────────────────────────────
   return (
     <div>
-      {/* ── Screen heading ── */}
+      {/* Screen heading (always visible) */}
       <div className="mb-5">
         <h2 className="text-lg font-semibold text-brand-muted">Log Prep</h2>
         <p className="text-sm text-brand-muted/50 mt-1">
@@ -184,158 +357,49 @@ export default function PrepScreen() {
         </p>
       </div>
 
-      {/* ── From Plan queue ── */}
-      {pendingPreps.length > 0 && (
-        <div className="mb-6">
-          <div className="space-y-3">
-            {pendingPreps.map((p) => <PendingCard key={p.id} pending={p} />)}
-          </div>
-          <div className="border-t border-brand-muted/10 mt-6 pt-5">
-            <p className="text-xs text-brand-muted/40 mb-4">Or log a different meal manually:</p>
-          </div>
-        </div>
-      )}
+      {/* Desktop 3-column grid */}
+      <div className="lg:grid lg:grid-cols-[320px_1fr_280px] lg:gap-7 lg:items-start">
 
-      {success && (() => {
-        const available = preparedMeals.filter((m) => m.servingsRemaining > 0).length;
-        const streak    = computeWeekStreak(mealEatenDates);
-
-        // Coverage estimate: how many days does current inventory cover?
-        const mealsPerDay   = userPrefs ? userPrefs.mealsPerWeek / 7 : 1;
-        const coverageDays  = available > 0 ? Math.round(available / mealsPerDay) : 0;
-        const setForWeek    = coverageDays >= 7;
-        const coverageLabel = (!setForWeek && coverageDays > 0)
-          ? addDays(new Date(), coverageDays - 1).toLocaleDateString('en-US', { weekday: 'long' })
-          : null;
-
-        const coverageLine = setForWeek
-          ? "You're set for the week."
-          : coverageLabel
-          ? `Covered through ${coverageLabel}.`
-          : null;
-
-        return (
-          <div className="mb-5 bg-brand-surface rounded-xl border border-brand-accent/25 p-4 cursor-pointer" onClick={() => setSuccess(false)}>
-            {/* Benefit-first headline */}
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div>
-                <p className="text-base font-semibold text-brand-muted leading-snug">
-                  {available} meal{available !== 1 ? 's' : ''} ready.
-                </p>
-                {coverageLine && (
-                  <p className="text-sm text-brand-muted/50 mt-0.5">{coverageLine}</p>
-                )}
-              </div>
-              <div className="w-7 h-7 rounded-full bg-brand-accent/20 border border-brand-accent/30 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-brand-accent text-xs font-bold">✓</span>
+        {/* Left col: From Your Plan */}
+        <div>
+          {pendingPreps.length > 0 ? (
+            <div>
+              <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide mb-3 hidden lg:block">From Your Plan</p>
+              <div className="space-y-3">
+                {pendingPreps.map((p) => <PendingCard key={p.id} pending={p} />)}
               </div>
             </div>
+          ) : (
+            <div className="hidden lg:flex flex-col items-center justify-center py-16 text-center">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/20 mb-3">
+                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+                <rect x="9" y="3" width="6" height="4" rx="1" />
+              </svg>
+              <p className="text-sm text-brand-muted/40">No pending prep</p>
+              <p className="text-xs text-brand-muted/30 mt-1">Add meals to your plan first</p>
+            </div>
+          )}
 
-            {/* Stat chips */}
-            <div className="flex gap-2 mb-2.5">
-              <div className="flex-1 bg-brand-bg rounded-lg px-3 py-2.5">
-                <p className="text-[11px] text-brand-muted/40 mb-1">In inventory</p>
-                <p className="text-sm font-semibold text-brand-muted leading-none">{available}</p>
-              </div>
-              {streak > 0 && (
-                <div className="flex-1 bg-brand-bg rounded-lg px-3 py-2.5">
-                  <p className="text-[11px] text-brand-muted/40 mb-1">Streak</p>
-                  <p className="text-sm font-semibold text-brand-muted leading-none">
-                    {streak} wk{streak !== 1 ? 's' : ''}
-                  </p>
-                </div>
-              )}
-              <div className="flex-1 bg-brand-bg rounded-lg px-3 py-2.5">
-                <p className="text-[11px] text-brand-muted/40 mb-1">Session</p>
-                <p className="text-sm font-semibold text-brand-muted leading-none">#{prepSessionsLogged}</p>
+          {/* Mobile: show pending preps inline above form */}
+          {pendingPreps.length > 0 && (
+            <div className="lg:hidden mb-6">
+              <div className="border-t border-brand-muted/10 mt-6 pt-5">
+                <p className="text-xs text-brand-muted/40 mb-4">Or log a different meal manually:</p>
               </div>
             </div>
-
-            {/* Contextual bottom line */}
-            {streak >= 2 && (
-              <p className="text-xs text-brand-accent/70">{streak}-week consistency streak.</p>
-            )}
-            {streak === 1 && (
-              <p className="text-xs text-brand-muted/40">First week active. Keep going.</p>
-            )}
-            {streak === 0 && prepSessionsLogged === 1 && (
-              <p className="text-xs text-brand-muted/40">Head to Calendar to schedule your meals.</p>
-            )}
-          </div>
-        );
-      })()}
-
-      <form onSubmit={handleSubmit} className="bg-brand-surface rounded-lg border border-brand-muted/15 p-6 space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-brand-muted/70 mb-1.5">Recipe</label>
-          <select value={recipeId} onChange={(e) => handleRecipeChange(e.target.value)} required className={inputClass}>
-            <option value="">Select a recipe...</option>
-            {recipes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </select>
+          )}
         </div>
 
-        {recipe && isComposed && recipe.slots?.map((slot) => (
-          <div key={slot.id}>
-            <label className="block text-sm font-medium text-brand-muted/70 mb-2">{slot.label}</label>
-            <div className="flex flex-wrap gap-2">
-              {slot.options.map((opt) => (
-                <button key={opt.name} type="button" onClick={() => pickSlot(slot.id, opt.name)}
-                  className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${slotPicks[slot.id] === opt.name ? 'bg-brand-accent text-white border-brand-accent' : 'bg-brand-bg text-brand-muted/60 border-brand-muted/20 hover:border-brand-accent/50'}`}>
-                  {opt.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-
-        {recipe && !isComposed && recipe.variants.length > 0 && (
-          <div>
-            <label className="block text-sm font-medium text-brand-muted/70 mb-1.5">Variant</label>
-            <select value={variantId} onChange={(e) => setVariantId(e.target.value)} required className={inputClass}>
-              <option value="">Select a variant...</option>
-              {recipe.variants.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </select>
-          </div>
-        )}
-
-        {recipe && isComposed && allSlotsPicked && (
-          <div className="px-3 py-2 bg-brand-bg rounded-lg border border-brand-muted/10">
-            <p className="text-xs text-brand-muted/40 mb-1">Your plate</p>
-            <p className="text-sm text-brand-muted/80">{(recipe.slots || []).map((s) => slotPicks[s.id]).filter(Boolean).join(' · ')}</p>
-          </div>
-        )}
-
+        {/* Center col: Log Manually */}
         <div>
-          <label className="block text-sm font-medium text-brand-muted/70 mb-1.5">Servings</label>
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={() => setServings((s) => Math.max(1, s - 1))} className="w-8 h-8 rounded-full border border-brand-muted/20 text-brand-muted/60 hover:border-brand-accent hover:text-brand-accent flex items-center justify-center text-lg font-light transition-colors">−</button>
-            <span className="text-lg font-semibold text-brand-muted w-8 text-center">{servings}</span>
-            <button type="button" onClick={() => setServings((s) => s + 1)} className="w-8 h-8 rounded-full border border-brand-muted/20 text-brand-muted/60 hover:border-brand-accent hover:text-brand-accent flex items-center justify-center text-lg font-light transition-colors">+</button>
-          </div>
+          <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide mb-3 hidden lg:block">Log Manually</p>
+          {success && <SuccessCard onDismiss={() => setSuccess(false)} />}
+          {manualForm}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-brand-muted/70 mb-1.5">Prep Date</label>
-          <input type="date" value={prepDate} onChange={(e) => setPrepDate(e.target.value)} required className={inputClass} />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-brand-muted/70 mb-2">Storage</label>
-          <div className="flex gap-3">
-            {(['refrigerated', 'frozen'] as StorageType[]).map((type) => (
-              <button key={type} type="button" onClick={() => setStorage(type)}
-                className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ${storage === type ? 'bg-brand-slate text-white border-brand-slate' : 'bg-brand-bg text-brand-muted/60 border-brand-muted/20 hover:border-brand-slate/50'}`}>
-                {type === 'refrigerated' ? 'Refrigerated' : 'Frozen'}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-brand-muted/30 mt-2">{storage === 'refrigerated' ? 'Fresh for 4 days' : 'Fresh for 90 days'}</p>
-        </div>
-
-        <button type="submit" disabled={!canSubmit} className="w-full bg-brand-accent text-white py-2.5 rounded-lg text-sm font-medium hover:bg-brand-accent/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-          Log Prep Session
-        </button>
-      </form>
+        {/* Right col: Just Prepped (desktop only) */}
+        <JustPreppedRail />
+      </div>
     </div>
   );
 }

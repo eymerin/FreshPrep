@@ -259,9 +259,9 @@ function SettingsTab() {
   );
 }
 
-// ── Main component ────────────────────────────────────────────
+// ── Shared profile body ───────────────────────────────────────
 
-export default function ProfileScreen({ onClose }: { onClose: () => void }) {
+function ProfileBody({ onClose: _onClose, pageMode }: { onClose: () => void; pageMode?: boolean }) {
   const [tab, setTab]         = useState<'stats' | 'settings'>('stats');
   const userProfile           = useAppStore(s => s.userProfile);
   const updateUserProfile     = useAppStore(s => s.updateUserProfile);
@@ -272,17 +272,205 @@ export default function ProfileScreen({ onClose }: { onClose: () => void }) {
   const nameRef = useRef<HTMLInputElement>(null);
   const [showCollection, setShowCollection] = useState(false);
 
-  // Lock body scroll while profile is open so the page behind doesn't scroll
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
   const joinedDate = new Date(userProfile.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   function saveName() {
     const trimmed = editingName.trim();
     if (trimmed !== userProfile.name) updateUserProfile({ name: trimmed });
+  }
+
+  // ── Left column (avatar card + collectible) ────────────────
+  const leftCol = (
+    <div className="space-y-4">
+      {/* Personal info card */}
+      <div className="flex items-center gap-4 bg-brand-surface rounded-xl border border-brand-muted/10 px-5 py-5">
+        <Avatar name={editingName || userProfile.name} size="lg" />
+        <div className="flex-1 min-w-0">
+          <input
+            ref={nameRef}
+            value={editingName}
+            onChange={e => setEditingName(e.target.value)}
+            onBlur={saveName}
+            onKeyDown={e => e.key === 'Enter' && nameRef.current?.blur()}
+            placeholder="Add your name"
+            className="w-full bg-transparent text-lg font-semibold text-brand-muted focus:outline-none border-b border-transparent focus:border-brand-muted/30 pb-0.5 truncate"
+          />
+          <p className="text-xs text-brand-muted/40 mt-1">Member since {joinedDate}</p>
+          <div className="flex gap-3 mt-2">
+            <span className="text-xs text-brand-muted/50"><span className="font-semibold text-brand-muted">{mealsEatenAllTime}</span> meals eaten</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Collection entry */}
+      <button
+        onClick={() => setShowCollection(true)}
+        className="w-full flex items-center gap-3 bg-brand-surface border border-brand-muted/15 rounded-xl px-4 py-3.5 hover:border-brand-accent/40 transition-colors text-left"
+      >
+        <div className="w-10 h-10 rounded-lg bg-brand-accent/15 flex items-center justify-center shrink-0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-brand-accent">
+            <rect x="2" y="5" width="13" height="16" rx="2"/>
+            <path d="M5 2h12a2 2 0 0 1 2 2v15"/>
+            <line x1="6" y1="10" x2="11" y2="10"/>
+            <line x1="6" y1="14" x2="11" y2="14"/>
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-sm font-semibold text-brand-muted">Collectible Cards</p>
+            <span className="text-xs font-semibold text-brand-accent">
+              {unlockedMessageIds.length} of {ALL_MESSAGES.length} unlocked
+            </span>
+          </div>
+          <p className="text-xs text-brand-muted/40 mb-2">Earn one every time you prep, eat a full day, or hit a streak</p>
+          <div className="h-1 bg-brand-bg rounded-full overflow-hidden">
+            <div
+              className="h-full bg-brand-accent rounded-full transition-all duration-500"
+              style={{ width: `${(unlockedMessageIds.length / ALL_MESSAGES.length) * 100}%` }}
+            />
+          </div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/30 shrink-0">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+    </div>
+  );
+
+  // ── Right column (tabs: Stats / Settings) ──────────────────
+  const rightCol = (
+    <div className="bg-brand-surface rounded-xl border border-brand-muted/10 overflow-hidden">
+      <div className="flex border-b border-brand-muted/10 bg-brand-surface sticky top-0 z-10">
+        {(['stats', 'settings'] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`flex-1 py-3 text-sm font-medium capitalize transition-colors ${
+              tab === t ? 'text-brand-accent border-b-2 border-brand-accent' : 'text-brand-muted/50 hover:text-brand-muted'
+            }`}>
+            {t}
+          </button>
+        ))}
+      </div>
+      {tab === 'stats' ? (
+        <div className="p-5">
+          <StatsContent />
+        </div>
+      ) : (
+        <SettingsTab />
+      )}
+    </div>
+  );
+
+  if (pageMode) {
+    return (
+      <>
+        <div className="mb-5">
+          <h2 className="text-lg font-semibold text-brand-muted">Profile</h2>
+        </div>
+        <div className="lg:grid lg:grid-cols-[320px_1fr] lg:gap-7 lg:items-start space-y-4 lg:space-y-0">
+          <div className="lg:sticky lg:top-6">{leftCol}</div>
+          <div>{rightCol}</div>
+        </div>
+        {showCollection && <MessageCollection onClose={() => setShowCollection(false)} />}
+      </>
+    );
+  }
+
+  // Modal mode (mobile default)
+  return (
+    <>
+      {/* Personal info */}
+      <div className="px-5 py-6 flex items-center gap-4 bg-brand-surface border-b border-brand-muted/10">
+        <Avatar name={editingName || userProfile.name} size="lg" />
+        <div className="flex-1 min-w-0">
+          <input
+            ref={nameRef}
+            value={editingName}
+            onChange={e => setEditingName(e.target.value)}
+            onBlur={saveName}
+            onKeyDown={e => e.key === 'Enter' && nameRef.current?.blur()}
+            placeholder="Add your name"
+            className="w-full bg-transparent text-lg font-semibold text-brand-muted focus:outline-none border-b border-transparent focus:border-brand-muted/30 pb-0.5 truncate"
+          />
+          <p className="text-xs text-brand-muted/40 mt-1">Member since {joinedDate}</p>
+          <div className="flex gap-3 mt-2">
+            <span className="text-xs text-brand-muted/50"><span className="font-semibold text-brand-muted">{mealsEatenAllTime}</span> meals eaten</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Collection entry */}
+      <div className="px-4 pt-4 pb-1">
+        <button
+          onClick={() => setShowCollection(true)}
+          className="w-full flex items-center gap-3 bg-brand-surface border border-brand-muted/15 rounded-xl px-4 py-3.5 hover:border-brand-accent/40 transition-colors text-left"
+        >
+          <div className="w-10 h-10 rounded-lg bg-brand-accent/15 flex items-center justify-center shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-brand-accent">
+              <rect x="2" y="5" width="13" height="16" rx="2"/>
+              <path d="M5 2h12a2 2 0 0 1 2 2v15"/>
+              <line x1="6" y1="10" x2="11" y2="10"/>
+              <line x1="6" y1="14" x2="11" y2="14"/>
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-0.5">
+              <p className="text-sm font-semibold text-brand-muted">Collectible Cards</p>
+              <span className="text-xs font-semibold text-brand-accent">
+                {unlockedMessageIds.length} of {ALL_MESSAGES.length} unlocked
+              </span>
+            </div>
+            <p className="text-xs text-brand-muted/40 mb-2">Earn one every time you prep, eat a full day, or hit a streak</p>
+            <div className="h-1 bg-brand-bg rounded-full overflow-hidden">
+              <div
+                className="h-full bg-brand-accent rounded-full transition-all duration-500"
+                style={{ width: `${(unlockedMessageIds.length / ALL_MESSAGES.length) * 100}%` }}
+              />
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/30 shrink-0">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-brand-muted/10 bg-brand-surface sticky top-0 z-10">
+        {(['stats', 'settings'] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`flex-1 py-3 text-sm font-medium capitalize transition-colors ${
+              tab === t ? 'text-brand-accent border-b-2 border-brand-accent' : 'text-brand-muted/50 hover:text-brand-muted'
+            }`}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {tab === 'stats' ? (
+        <div className="p-5">
+          <StatsContent />
+        </div>
+      ) : (
+        <SettingsTab />
+      )}
+
+      {showCollection && <MessageCollection onClose={() => setShowCollection(false)} />}
+    </>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────
+
+export default function ProfileScreen({ onClose, pageMode }: { onClose: () => void; pageMode?: boolean }) {
+  // Lock body scroll while profile modal is open (modal mode only)
+  useEffect(() => {
+    if (pageMode) return;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, [pageMode]);
+
+  if (pageMode) {
+    return <ProfileBody onClose={onClose} pageMode />;
   }
 
   return (
@@ -298,87 +486,8 @@ export default function ProfileScreen({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="flex-1 overflow-y-auto overscroll-none">
-        {/* Personal info */}
-        <div className="px-5 py-6 flex items-center gap-4 bg-brand-surface border-b border-brand-muted/10">
-          <Avatar name={editingName || userProfile.name} size="lg" />
-          <div className="flex-1 min-w-0">
-            <input
-              ref={nameRef}
-              value={editingName}
-              onChange={e => setEditingName(e.target.value)}
-              onBlur={saveName}
-              onKeyDown={e => e.key === 'Enter' && nameRef.current?.blur()}
-              placeholder="Add your name"
-              className="w-full bg-transparent text-lg font-semibold text-brand-muted focus:outline-none border-b border-transparent focus:border-brand-muted/30 pb-0.5 truncate"
-            />
-            <p className="text-xs text-brand-muted/40 mt-1">Member since {joinedDate}</p>
-            <div className="flex gap-3 mt-2">
-              <span className="text-xs text-brand-muted/50"><span className="font-semibold text-brand-muted">{mealsEatenAllTime}</span> meals eaten</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Collection entry */}
-        <div className="px-4 pt-4 pb-1">
-          <button
-            onClick={() => setShowCollection(true)}
-            className="w-full flex items-center gap-3 bg-brand-surface border border-brand-muted/15 rounded-xl px-4 py-3.5 hover:border-brand-accent/40 transition-colors text-left"
-          >
-            {/* Icon */}
-            <div className="w-10 h-10 rounded-lg bg-brand-accent/15 flex items-center justify-center shrink-0">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-brand-accent">
-                <rect x="2" y="5" width="13" height="16" rx="2"/>
-                <path d="M5 2h12a2 2 0 0 1 2 2v15"/>
-                <line x1="6" y1="10" x2="11" y2="10"/>
-                <line x1="6" y1="14" x2="11" y2="14"/>
-              </svg>
-            </div>
-            {/* Text + progress */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-0.5">
-                <p className="text-sm font-semibold text-brand-muted">Collectible Cards</p>
-                <span className="text-xs font-semibold text-brand-accent">
-                  {unlockedMessageIds.length} of {ALL_MESSAGES.length} unlocked
-                </span>
-              </div>
-              <p className="text-xs text-brand-muted/40 mb-2">Earn one every time you prep, eat a full day, or hit a streak</p>
-              <div className="h-1 bg-brand-bg rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-brand-accent rounded-full transition-all duration-500"
-                  style={{ width: `${(unlockedMessageIds.length / ALL_MESSAGES.length) * 100}%` }}
-                />
-              </div>
-            </div>
-            {/* Arrow */}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/30 shrink-0">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex border-b border-brand-muted/10 bg-brand-surface sticky top-0 z-10">
-          {(['stats', 'settings'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`flex-1 py-3 text-sm font-medium capitalize transition-colors ${
-                tab === t ? 'text-brand-accent border-b-2 border-brand-accent' : 'text-brand-muted/50 hover:text-brand-muted'
-              }`}>
-              {t}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab content */}
-        {tab === 'stats' ? (
-          <div className="p-5">
-            <StatsContent />
-          </div>
-        ) : (
-          <SettingsTab />
-        )}
+        <ProfileBody onClose={onClose} />
       </div>
-
-      {showCollection && <MessageCollection onClose={() => setShowCollection(false)} />}
     </div>
   );
 }

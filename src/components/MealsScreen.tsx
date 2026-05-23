@@ -124,6 +124,8 @@ function FreshnessBar({ meal }: { meal: PreparedMeal }) {
   );
 }
 
+type MealFilter = 'all' | 'fridge' | 'frozen' | 'expiring' | 'unscheduled';
+
 // ── Main screen ───────────────────────────────────────────────
 export default function MealsScreen() {
   const preparedMeals      = useAppStore((s) => s.preparedMeals);
@@ -133,6 +135,7 @@ export default function MealsScreen() {
   const userPrefs          = useAppStore((s) => s.userPrefs);
   const [schedulingMeal, setSchedulingMeal] = useState<PreparedMeal | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<MealFilter>('all');
 
   const available      = preparedMeals.filter((m) => m.servingsRemaining > 0);
   const empty          = preparedMeals.filter((m) => m.servingsRemaining === 0);
@@ -149,7 +152,7 @@ export default function MealsScreen() {
     ? addDays(new Date(), coverageDays - 1).toLocaleDateString('en-US', { weekday: 'long' })
     : null;
 
-  const sorted = [...available].sort((a, b) => {
+  const sortedAll = [...available].sort((a, b) => {
     const order = { expired: 0, expiring: 1, fresh: 2 };
     return order[getFreshnessStatus(a)] - order[getFreshnessStatus(b)];
   });
@@ -157,6 +160,32 @@ export default function MealsScreen() {
   function assignedCount(mealId: string) {
     return scheduledMeals.filter((s) => s.preparedMealId === mealId).length;
   }
+
+  // Filter chips counts
+  const fridgeCount      = available.filter((m) => m.storage === 'refrigerated').length;
+  const frozenCount      = available.filter((m) => m.storage === 'frozen').length;
+  const expiringCount    = expiringSoon.length;
+  const unscheduledCount = available.filter((m) => {
+    const assigned = assignedCount(m.id);
+    return m.servingsRemaining - assigned > 0;
+  }).length;
+
+  const filterChips: { id: MealFilter; label: string; count: number }[] = [
+    { id: 'all',         label: 'All',         count: available.length },
+    { id: 'fridge',      label: 'Fridge',      count: fridgeCount },
+    { id: 'frozen',      label: 'Frozen',      count: frozenCount },
+    { id: 'expiring',    label: 'Expiring',    count: expiringCount },
+    { id: 'unscheduled', label: 'Unscheduled', count: unscheduledCount },
+  ];
+
+  const sorted = sortedAll.filter((m) => {
+    if (activeFilter === 'all')         return true;
+    if (activeFilter === 'fridge')      return m.storage === 'refrigerated';
+    if (activeFilter === 'frozen')      return m.storage === 'frozen';
+    if (activeFilter === 'expiring')    return expiringSoon.includes(m);
+    if (activeFilter === 'unscheduled') return m.servingsRemaining - assignedCount(m.id) > 0;
+    return true;
+  });
 
   return (
     <div>
@@ -174,13 +203,35 @@ export default function MealsScreen() {
         )}
       </div>
 
-      {expiringSoon.length > 0 && available.length > 0 && (
+      {/* Filter chips toolbar — visible on desktop, scrollable on mobile */}
+      {available.length > 0 && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
+          {filterChips.map((chip) => (
+            <button
+              key={chip.id}
+              onClick={() => setActiveFilter(chip.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shrink-0 transition-colors border ${
+                activeFilter === chip.id
+                  ? 'bg-brand-accent text-white border-brand-accent'
+                  : 'bg-brand-surface border-brand-muted/20 text-brand-muted/60 hover:border-brand-accent/40 hover:text-brand-muted'
+              }`}
+            >
+              {chip.label}
+              <span className={`text-[10px] font-semibold ${activeFilter === chip.id ? 'text-white/80' : 'text-brand-muted/40'}`}>
+                {chip.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {expiringSoon.length > 0 && available.length > 0 && activeFilter === 'all' && (
         <p className="text-[11px] text-brand-muted/35 mb-4">
           Sorted by urgency — eat oldest meals first.
         </p>
       )}
 
-      {sorted.length === 0 && (
+      {sorted.length === 0 && available.length === 0 && (
         <div className="text-center py-16">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/20 mx-auto mb-4">
             <path d="M21 8l-9-5-9 5v8l9 5 9-5V8z" />
@@ -194,7 +245,13 @@ export default function MealsScreen() {
         </div>
       )}
 
-      <div className="space-y-3">
+      {sorted.length === 0 && available.length > 0 && (
+        <div className="text-center py-10">
+          <p className="text-sm text-brand-muted/40">No meals match this filter.</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {sorted.map((meal) => {
           const assigned = assignedCount(meal.id);
           const unassigned = meal.servingsRemaining - assigned;

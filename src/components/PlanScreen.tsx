@@ -631,86 +631,114 @@ export default function PlanScreen({ onNavigate }: { onNavigate: (tab: string) =
     entryNumberMap[entry.id] = entryNumbers[entry.recipeId];
   }
 
-  return (
+  const planContent = (
     <div>
-      <div className="flex bg-brand-surface rounded-lg border border-brand-muted/15 p-1 mb-5">
-        <button
-          onClick={() => setSubTab('picks')}
-          className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
-            subTab === 'picks' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'
-          }`}
-        >
-          What to Prep
-        </button>
-        <button
-          onClick={() => setSubTab('shopping')}
-          className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
-            subTab === 'shopping' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'
-          }`}
-        >
-          Shopping List
-          {totalShoppingItems > 0 && (
-            <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-xs bg-brand-warm text-brand-bg rounded-full font-semibold">
-              {totalShoppingItems}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {subTab === 'picks' && (
-        <div>
-          {/* Total meals counter */}
-          {planEntries.length > 0 && (() => {
-            const totalMeals = planEntries.reduce((sum, e) => sum + e.servings, 0);
-            return (
-              <div className="flex items-center justify-between mb-4 px-3 py-2.5 bg-brand-surface rounded-lg border border-brand-muted/15">
-                <p className="text-sm font-medium text-brand-muted">{totalMeals} meals planned</p>
-                <p className="text-xs text-brand-muted/40">{planEntries.length} recipe{planEntries.length !== 1 ? 's' : ''}</p>
-              </div>
-            );
-          })()}
-
-          <button
-            onClick={() => setShowPicker(true)}
-            className="w-full mb-4 py-2.5 rounded-lg border border-dashed border-brand-muted/25 text-sm text-brand-muted/50 hover:border-brand-accent/50 hover:text-brand-accent transition-colors"
-          >
-            + Add a meal to this week's plan
-          </button>
-
-          {planEntries.length === 0 && (
-            <div className="text-center py-16">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/20 mx-auto mb-4">
-                <rect x="3" y="4" width="18" height="18" rx="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-                <line x1="9" y1="15" x2="15" y2="15" />
-                <line x1="12" y1="12" x2="12" y2="18" />
-              </svg>
-              <p className="font-medium text-brand-muted/60">Nothing planned yet</p>
-              <p className="text-sm mt-1 text-brand-muted/40">Tap above to add meals to this week's plan.</p>
-            </div>
-          )}
-
-          <div className="space-y-3">
-            {planEntries.map((entry) => {
-              const recipe = recipes.find((r) => r.id === entry.recipeId);
-              if (!recipe) return null;
-              return (
-                <EntryCard
-                  key={entry.id}
-                  entry={entry}
-                  recipe={recipe}
-                  entryNumber={entryNumberMap[entry.id]}
-                />
-              );
-            })}
+      {/* Total meals counter */}
+      {planEntries.length > 0 && (() => {
+        const totalMeals = planEntries.reduce((sum, e) => sum + e.servings, 0);
+        return (
+          <div className="flex items-center justify-between mb-4 px-3 py-2.5 bg-brand-surface rounded-lg border border-brand-muted/15">
+            <p className="text-sm font-medium text-brand-muted">{totalMeals} meals planned</p>
+            <p className="text-xs text-brand-muted/40">{planEntries.length} recipe{planEntries.length !== 1 ? 's' : ''}</p>
           </div>
+        );
+      })()}
 
+      <button
+        onClick={() => setShowPicker(true)}
+        className="w-full mb-4 py-2.5 rounded-lg border border-dashed border-brand-muted/25 text-sm text-brand-muted/50 hover:border-brand-accent/50 hover:text-brand-accent transition-colors"
+      >
+        + Add a meal to this week's plan
+      </button>
+
+      {planEntries.length === 0 && (
+        <div className="text-center py-16">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/20 mx-auto mb-4">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+            <line x1="9" y1="15" x2="15" y2="15" />
+            <line x1="12" y1="12" x2="12" y2="18" />
+          </svg>
+          <p className="font-medium text-brand-muted/60">Nothing planned yet</p>
+          <p className="text-sm mt-1 text-brand-muted/40">Tap above to add meals to this week's plan.</p>
         </div>
       )}
 
-      {subTab === 'shopping' && <ShoppingTab />}
+      <div className="space-y-3">
+        {planEntries.map((entry) => {
+          const recipe = recipes.find((r) => r.id === entry.recipeId);
+          if (!recipe) return null;
+          return (
+            <EntryCard
+              key={entry.id}
+              entry={entry}
+              recipe={recipe}
+              entryNumber={entryNumberMap[entry.id]}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="lg:grid lg:grid-cols-[1fr_420px] lg:gap-8 lg:items-start">
+      {/* Left column: plan entries */}
+      <div>
+        {/* Mobile toggle — hidden on desktop */}
+        <div className="lg:hidden flex bg-brand-surface rounded-lg border border-brand-muted/15 p-1 mb-5">
+          <button
+            onClick={() => setSubTab('picks')}
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+              subTab === 'picks' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'
+            }`}
+          >
+            What to Prep
+          </button>
+          <button
+            onClick={() => setSubTab('shopping')}
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+              subTab === 'shopping' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'
+            }`}
+          >
+            Shopping List
+            {totalShoppingItems > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-xs bg-brand-warm text-brand-bg rounded-full font-semibold">
+                {totalShoppingItems}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* On mobile: show picks or shopping per subTab. On desktop: always show plan entries */}
+        <div className="lg:block">
+          {/* Desktop always shows plan; mobile shows plan only when subTab === 'picks' */}
+          <div className={subTab === 'picks' ? 'block' : 'hidden lg:block'}>
+            {planContent}
+          </div>
+          {/* Mobile-only shopping tab */}
+          <div className={subTab === 'shopping' ? 'block lg:hidden' : 'hidden'}>
+            <ShoppingTab />
+          </div>
+        </div>
+      </div>
+
+      {/* Right column: desktop always-visible shopping list */}
+      <div className="hidden lg:block sticky top-6">
+        <div className="bg-brand-surface rounded-xl border border-brand-muted/15 overflow-hidden">
+          <div className="px-4 py-3 border-b border-brand-muted/10 flex items-center justify-between">
+            <p className="text-sm font-semibold text-brand-muted">Shopping List</p>
+            {totalShoppingItems > 0 && (
+              <span className="text-xs font-semibold text-brand-warm">{totalShoppingItems} items</span>
+            )}
+          </div>
+          <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
+            <ShoppingTab />
+          </div>
+        </div>
+      </div>
 
       {showPicker && (
         <RecipePicker
