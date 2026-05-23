@@ -1337,32 +1337,77 @@ function SlotManager({ recipe }: { recipe: Recipe }) {
 
 // ── Per-serving macro summary for standard recipes ────────────
 
-function RecipeMacroSummary({ recipe }: { recipe: Recipe }) {
-  const serves = recipe.serves ?? 4;
-
+function computeBaseNutrients(recipe: Recipe): NutrientInfo[] {
   const parts: NutrientInfo[] = [];
   for (const ing of recipe.coreIngredients) {
     if (!ing.nutrition) continue;
     const grams = quantityToGrams(ing.quantity, ing.nutrition.gramsPerUnit);
-    const f = grams / 100;
-    parts.push({
-      calories: ing.nutrition.per100g.calories * f,
-      protein:  ing.nutrition.per100g.protein  * f,
-      carbs:    ing.nutrition.per100g.carbs    * f,
-      fat:      ing.nutrition.per100g.fat      * f,
-    });
+    parts.push(scaleNutrients(ing.nutrition.per100g, grams / 100));
   }
+  return parts;
+}
+
+function RecipeMacroSummary({ recipe }: { recipe: Recipe }) {
+  const serves = recipe.serves ?? 4;
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
 
   const { linked, total } = ingredientNutritionCoverage(recipe);
   if (linked === 0) return null;
 
-  const perServing = scaleNutrients(sumNutrients(parts), 1 / serves);
+  const baseParts = computeBaseNutrients(recipe);
+
+  const selectedVariant = recipe.variants.find(v => v.id === selectedVariantId) ?? null;
+  const variantParts: NutrientInfo[] = [];
+  if (selectedVariant) {
+    for (const ing of selectedVariant.additionalIngredients) {
+      if (!ing.nutrition) continue;
+      const grams = quantityToGrams(ing.quantity, ing.nutrition.gramsPerUnit);
+      variantParts.push(scaleNutrients(ing.nutrition.per100g, grams / 100));
+    }
+  }
+
+  const perServing = scaleNutrients(sumNutrients([...baseParts, ...variantParts]), 1 / serves);
+
+  const variantLinked = selectedVariant
+    ? selectedVariant.additionalIngredients.filter(i => i.nutrition).length
+    : 0;
+  const variantTotal = selectedVariant ? selectedVariant.additionalIngredients.length : 0;
+  const coverageNote = selectedVariant
+    ? `${linked + variantLinked}/${total + variantTotal} ingredients tracked`
+    : `${linked}/${total} ingredients tracked`;
 
   return (
     <div className="mt-4 pt-4 border-t border-brand-muted/10">
+      {recipe.variants.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          <button
+            onClick={() => setSelectedVariantId(null)}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+              selectedVariantId === null
+                ? 'bg-brand-accent text-white border-brand-accent'
+                : 'bg-brand-bg text-brand-muted/50 border-brand-muted/15 hover:border-brand-accent/40 hover:text-brand-muted'
+            }`}
+          >
+            Base only
+          </button>
+          {recipe.variants.map(v => (
+            <button
+              key={v.id}
+              onClick={() => setSelectedVariantId(v.id)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                selectedVariantId === v.id
+                  ? 'bg-brand-accent text-white border-brand-accent'
+                  : 'bg-brand-bg text-brand-muted/50 border-brand-muted/15 hover:border-brand-accent/40 hover:text-brand-muted'
+              }`}
+            >
+              {v.name}
+            </button>
+          ))}
+        </div>
+      )}
       <p className="text-[11px] text-brand-muted/40 uppercase tracking-wide mb-1">
-        Per meal · {linked}/{total} ingredients tracked
-        {recipe.variants.length > 0 && ' · base only'}
+        Per meal · {coverageNote}
+        {selectedVariant && variantLinked < variantTotal && ` · ${variantTotal - variantLinked} variant ingredient${variantTotal - variantLinked !== 1 ? 's' : ''} untracked`}
       </p>
       <MacroChips n={perServing} />
     </div>
