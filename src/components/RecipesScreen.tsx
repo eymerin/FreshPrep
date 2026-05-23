@@ -1375,8 +1375,13 @@ function TagEditor({ recipe }: { recipe: Recipe }) {
   const updateRecipeTags = useAppStore(s => s.updateRecipeTags);
   const [customInput, setCustomInput] = useState('');
   const current = recipe.tags ?? [];
-  const customTags = current.filter(t => !(PRESET_TAGS as readonly string[]).includes(t));
-  const allChips = [...PRESET_TAGS, ...customTags];
+  // Keep all custom tags visible (active or inactive) so they can be re-toggled
+  // without having to retype them. Inactive custom tags stay in the chip list
+  // until explicitly removed via the × button.
+  const [localCustomTags, setLocalCustomTags] = useState<string[]>(
+    current.filter(t => !(PRESET_TAGS as readonly string[]).includes(t))
+  );
+  const allChips = [...PRESET_TAGS, ...localCustomTags];
 
   function toggle(tag: string) {
     if (current.includes(tag)) {
@@ -1388,9 +1393,15 @@ function TagEditor({ recipe }: { recipe: Recipe }) {
 
   function addCustom() {
     const t = customInput.trim().toLowerCase();
-    if (!t || current.includes(t)) return;
-    updateRecipeTags(recipe.id, [...current, t]);
+    if (!t) return;
+    if (!localCustomTags.includes(t)) setLocalCustomTags(prev => [...prev, t]);
+    if (!current.includes(t)) updateRecipeTags(recipe.id, [...current, t]);
     setCustomInput('');
+  }
+
+  function removeCustom(tag: string) {
+    setLocalCustomTags(prev => prev.filter(t => t !== tag));
+    updateRecipeTags(recipe.id, current.filter(t => t !== tag));
   }
 
   return (
@@ -1401,15 +1412,24 @@ function TagEditor({ recipe }: { recipe: Recipe }) {
           const active = current.includes(tag);
           const isCustom = !(PRESET_TAGS as readonly string[]).includes(tag);
           return (
-            <button key={tag} onClick={() => toggle(tag)}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
-                active
-                  ? 'bg-brand-accent text-white border-brand-accent'
-                  : 'bg-brand-bg text-brand-muted/50 border-brand-muted/15 hover:border-brand-accent/40 hover:text-brand-muted'
-              }`}>
-              {tag}
-              {isCustom && active && <span className="ml-1 opacity-70">×</span>}
-            </button>
+            <span key={tag} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${
+              active
+                ? 'bg-brand-accent text-white border-brand-accent'
+                : 'bg-brand-bg text-brand-muted/50 border-brand-muted/15'
+            }`}>
+              <button onClick={() => toggle(tag)} className="hover:opacity-80 transition-opacity">
+                {tag}
+              </button>
+              {isCustom && (
+                <button
+                  onClick={() => removeCustom(tag)}
+                  className="opacity-60 hover:opacity-100 transition-opacity leading-none"
+                  aria-label={`Remove ${tag}`}
+                >
+                  ×
+                </button>
+              )}
+            </span>
           );
         })}
       </div>
