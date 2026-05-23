@@ -14,7 +14,7 @@
     "@capacitor/app": "^5.0.8",
     "@capacitor/cli": "^5.7.8",
     "@capacitor/core": "^5.7.8",
-    "@capacitor/local-notifications": "^8.1.0",
+    "@capacitor/local-notifications": "^5.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^5.0.12"
