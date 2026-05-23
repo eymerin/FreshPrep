@@ -200,7 +200,7 @@ export default function Layout({ activeTab, onTabChange, children }: LayoutProps
   }, [insightsTipSeen, markInsightsTipSeen]);
 
   return (
-    <div className="min-h-screen bg-brand-bg lg:flex lg:max-w-[1280px] lg:mx-auto">
+    <div className="min-h-screen bg-brand-bg lg:flex">
       {/* Desktop sidebar */}
       <DesktopSidebar activeTab={activeTab} onTabChange={onTabChange} />
 
