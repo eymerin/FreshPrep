@@ -88,41 +88,6 @@ function ScheduleModal({ meal, onClose }: { meal: PreparedMeal; onClose: () => v
   );
 }
 
-// ── Freshness bar ─────────────────────────────────────────────
-function FreshnessBar({ meal }: { meal: PreparedMeal }) {
-  const getDaysRemaining = useAppStore((s) => s.getDaysRemaining);
-  const getFreshnessStatus = useAppStore((s) => s.getFreshnessStatus);
-  const getExpirationDate = useAppStore((s) => s.getExpirationDate);
-
-  const status = getFreshnessStatus(meal);
-  const days = getDaysRemaining(meal);
-  const expDate = getExpirationDate(meal);
-  const shelfLife = meal.storage === 'refrigerated' ? 4 : 90;
-  const pct = Math.max(0, Math.min(100, (days / shelfLife) * 100));
-
-  const barColor = status === 'fresh' ? 'bg-emerald-500' : status === 'expiring' ? 'bg-amber-400' : 'bg-red-500';
-  const statusColor = status === 'fresh'
-    ? 'text-emerald-700 bg-emerald-100 border-emerald-300 dark:text-emerald-400 dark:bg-emerald-900/40 dark:border-emerald-800'
-    : status === 'expiring'
-    ? 'text-amber-700 bg-amber-100 border-amber-300 dark:text-amber-400 dark:bg-amber-900/40 dark:border-amber-800'
-    : 'text-red-700 bg-red-100 border-red-300 dark:text-red-400 dark:bg-red-900/40 dark:border-red-800';
-
-  return (
-    <div className="mt-3">
-      <div className="flex items-center justify-between mb-1">
-        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusColor}`}>
-          {status === 'fresh' ? 'Fresh' : status === 'expiring' ? 'Expiring soon' : 'Expired'}
-        </span>
-        <span className="text-xs text-brand-muted/60">
-          {days > 0 ? `${days}d left · expires ${formatDisplay(expDate)}` : `Expired ${formatDisplay(expDate)}`}
-        </span>
-      </div>
-      <div className="h-1.5 bg-brand-bg rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
 
 type MealFilter = 'all' | 'fridge' | 'frozen' | 'expiring' | 'unscheduled';
 
@@ -146,11 +111,16 @@ function MealCard({
 }) {
   const unassigned = meal.servingsRemaining - assignedCount;
   const getFreshnessStatus = useAppStore((s) => s.getFreshnessStatus);
-  const freshnessStatus = getFreshnessStatus(meal);
-  const isExpiringSoon = freshnessStatus === 'expiring' || freshnessStatus === 'expired';
+  const getDaysRemaining   = useAppStore((s) => s.getDaysRemaining);
+  const getExpirationDate  = useAppStore((s) => s.getExpirationDate);
+  const status      = getFreshnessStatus(meal);
+  const days        = getDaysRemaining(meal);
+  const expDate     = getExpirationDate(meal);
+  const shelfLife   = meal.storage === 'refrigerated' ? 4 : 90;
+  const freshPct    = Math.max(0, Math.min(100, (days / shelfLife) * 100));
+  const isExpiringSoon = status === 'expiring' || status === 'expired';
 
-  const isFridge = meal.storage === 'refrigerated';
-  const storageChipDot = isFridge ? 'bg-brand-accent' : 'bg-brand-slate';
+  const isFridge    = meal.storage === 'refrigerated';
   const storageLabel = isFridge ? 'Fridge' : 'Frozen';
 
   if (viewMode === 'list') {
@@ -167,7 +137,7 @@ function MealCard({
         {/* Storage + servings */}
         <div className="flex items-center gap-3 shrink-0" style={{ width: '14%' }}>
           <span className="flex items-center gap-1.5 text-xs font-medium text-brand-muted/60">
-            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${storageChipDot}`} />
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isFridge ? 'bg-brand-accent' : 'bg-brand-slate'}`} />
             {storageLabel}
           </span>
           <span className="text-xs text-brand-muted/40">{meal.servingsRemaining} srv</span>
@@ -220,42 +190,62 @@ function MealCard({
     );
   }
 
+  // Status pill colours matching v5 CSS custom properties
+  const storagePillCls = isFridge
+    ? 'bg-brand-accent/15 text-emerald-300/80'
+    : 'bg-brand-slate/20 text-brand-slate';
+  const freshnessPillCls = status === 'fresh'
+    ? 'bg-emerald-900/20 text-emerald-300'
+    : status === 'expiring'
+    ? 'bg-amber-900/20 text-amber-300'
+    : 'bg-red-400/10 text-red-400';
+  const freshnessLabel = status === 'fresh' ? 'Fresh' : status === 'expiring' ? 'Expiring soon' : 'Expired';
+  const barCls = status === 'fresh' ? 'bg-emerald-500' : status === 'expiring' ? 'bg-amber-400' : 'bg-red-500';
+  const expiryText = days > 0 ? `${days}d · ${formatDisplay(expDate)}` : `Expired ${formatDisplay(expDate)}`;
+
   return (
-    <div className="bg-brand-surface rounded-xl border border-brand-muted/15 p-4 flex flex-col gap-3">
-      {/* Row 1: name + storage chip + checkbox */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-brand-muted text-[15px] leading-tight">{meal.recipeName}</p>
+    <div className="bg-brand-surface rounded-xl border border-brand-muted/15 p-4 flex flex-col gap-[11px] relative">
+
+      {/* Absolute checkbox — top: 12px; right: 12px */}
+      <div className="absolute top-3 right-3 w-[18px] h-[18px] border-[1.5px] border-brand-muted/25 rounded-[4px] bg-brand-bg z-[1]" />
+
+      {/* 1. Head — name + variant left, storage pill right; pr-[26px] clears checkbox */}
+      <div className="flex items-start justify-between gap-[10px] pr-[26px]">
+        <div>
+          <p className="text-[14px] font-semibold text-brand-muted leading-[1.25]">{meal.recipeName}</p>
           {meal.variantName && meal.variantName !== meal.recipeName && (
-            <p className="text-xs text-brand-muted/50 mt-0.5">{meal.variantName}</p>
+            <p className="text-[12px] text-brand-muted/50 mt-[2px]">{meal.variantName}</p>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0 mt-0.5">
-          <span className="flex items-center gap-1.5 text-xs font-medium text-brand-muted/70 bg-brand-bg border border-brand-muted/10 rounded-full px-2.5 py-1">
-            <span className={`w-1.5 h-1.5 rounded-full ${storageChipDot}`} />
-            {storageLabel}
+        <span className={`inline-flex items-center gap-[6px] text-[11px] font-semibold px-[9px] py-[3px] rounded-full shrink-0 ${storagePillCls}`}>
+          <span className="w-[6px] h-[6px] rounded-full bg-current shrink-0" />
+          {storageLabel}
+        </span>
+      </div>
+
+      {/* 2. Meta — "Prepped date · N servings · N unscheduled" */}
+      <div className="flex gap-[14px] flex-wrap text-[11px] text-brand-muted/50">
+        <span>Prepped {formatDisplay(meal.prepDate)}</span>
+        <span><span className="font-semibold text-brand-muted">{meal.servingsRemaining}</span> servings</span>
+        <span><span className="font-semibold text-brand-muted">{unassigned}</span> unscheduled</span>
+      </div>
+
+      {/* 3. Freshness block — status pill + days/date, then progress bar */}
+      <div>
+        <div className="flex items-center justify-between mb-[6px] gap-[8px]">
+          <span className={`inline-flex items-center text-[11px] font-semibold px-[9px] py-[3px] rounded-full ${freshnessPillCls}`}>
+            {freshnessLabel}
           </span>
-          <div className="w-4 h-4 border border-brand-muted/25 rounded-sm bg-brand-bg shrink-0" />
+          <span className="text-[11px] text-brand-muted/60">{expiryText}</span>
+        </div>
+        <div className="h-[4px] bg-brand-bg rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${barCls}`} style={{ width: `${freshPct}%` }} />
         </div>
       </div>
 
-      {/* Row 2: metadata */}
-      <p className="text-xs text-brand-muted/50">
-        Prepped {formatDisplay(meal.prepDate)}
-        <span className="mx-1.5 text-brand-muted/20">·</span>
-        {meal.servingsRemaining} serving{meal.servingsRemaining !== 1 ? 's' : ''}
-        <span className="mx-1.5 text-brand-muted/20">·</span>
-        <span className={unassigned > 0 ? 'text-brand-muted/50' : 'text-brand-muted/25'}>
-          {unassigned} unscheduled
-        </span>
-      </p>
-
-      {/* Freshness bar */}
-      <FreshnessBar meal={meal} />
-
-      {/* Macros */}
+      {/* 4. Macros mini — border-top, 4 stacked value/label columns */}
       {meal.nutrientsPerServing && (
-        <div className="flex gap-4">
+        <div className="flex gap-[12px] pt-[10px] border-t border-brand-muted/[0.08] text-[11px] text-brand-muted/50">
           {[
             { val: Math.round(meal.nutrientsPerServing.calories), label: 'cal' },
             { val: Math.round(meal.nutrientsPerServing.protein),  label: 'protein' },
@@ -263,30 +253,28 @@ function MealCard({
             { val: Math.round(meal.nutrientsPerServing.fat),      label: 'fat' },
           ].map(({ val, label }) => (
             <div key={label} className="flex flex-col">
-              <span className="text-sm font-semibold text-brand-muted leading-none">
-                {val}{label !== 'cal' ? 'g' : ''}
-              </span>
-              <span className="text-[10px] text-brand-muted/40 mt-0.5">{label}</span>
+              <span className="text-[12px] font-semibold text-brand-muted">{val}{label !== 'cal' ? 'g' : ''}</span>
+              <span>{label}</span>
             </div>
           ))}
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex gap-2 pt-1 border-t border-brand-muted/10">
+      {/* 5. Actions — border-top, Schedule (flex-1) + trash icon */}
+      <div className="flex gap-[6px] pt-[10px] border-t border-brand-muted/[0.08]">
         <button
           onClick={onSchedule}
           disabled={unassigned <= 0}
-          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
+          className={`flex-1 py-[5px] px-[10px] text-[12px] font-semibold rounded-lg transition-colors ${
             unassigned > 0
               ? 'bg-brand-accent text-white hover:bg-brand-accent/80'
-              : 'bg-transparent text-brand-muted/30 cursor-not-allowed'
+              : 'text-brand-muted/30 cursor-not-allowed'
           }`}
         >
           {unassigned > 0 ? 'Schedule' : (
             <span className="flex items-center justify-center gap-1.5">
               Fully scheduled
-              {isExpiringSoon && <span className="text-amber-400 text-xs font-bold">· eat soon</span>}
+              {isExpiringSoon && <span className="text-amber-400 font-bold">· eat soon</span>}
             </span>
           )}
         </button>
@@ -298,10 +286,10 @@ function MealCard({
         ) : (
           <button
             onClick={() => setConfirmRemoveId(meal.id)}
-            className="text-brand-muted/25 hover:text-red-400 transition-colors w-9 flex items-center justify-center rounded-lg hover:bg-red-400/10"
+            className="w-8 h-8 flex items-center justify-center text-brand-muted/30 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
             aria-label="Remove meal"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="3 6 5 6 21 6" />
               <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
               <path d="M10 11v6M14 11v6" />
