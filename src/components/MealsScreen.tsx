@@ -509,7 +509,7 @@ export default function MealsScreen({ onNavigate }: { onNavigate?: (tab: string)
           )}
 
           {/* Desktop card grid */}
-          <div className={`hidden lg:block ${viewMode === 'card' ? 'grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3' : 'flex flex-col gap-1'}`}>
+          <div className={`hidden lg:block ${viewMode === 'card' ? 'grid grid-cols-3 gap-3' : 'flex flex-col gap-1'}`}>
             {desktopFiltered.map((meal) => (
               <MealCard
                 key={meal.id}
