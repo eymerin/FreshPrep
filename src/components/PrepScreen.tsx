@@ -391,7 +391,7 @@ export default function PrepScreen({ onNavigate }: { onNavigate: (tab: string) =
             </svg>
             <p className="text-sm font-medium text-brand-muted/60 mb-1">Nothing in your prep queue</p>
             <p className="text-xs text-brand-muted/35 leading-relaxed">
-              Go to Plan, pick your meals for the week, and tap "Send to Prep Queue" when you're done shopping.
+              Go to Plan, pick your meals for the week, check off your shopping list, then tap "Queue Prep."
             </p>
           </div>
         )}

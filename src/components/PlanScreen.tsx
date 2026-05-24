@@ -211,15 +211,6 @@ function ShoppingTab() {
   const sortMode = useAppStore((s) => s.shoppingSortMode);
   const setSortMode = useAppStore((s) => s.setShoppingSortMode);
   const [confirmReset, setConfirmReset] = useState(false);
-  // Session-only "already have this" set — items the user owns and don't need to buy
-  const [haveKeys, setHaveKeys] = useState<Set<string>>(new Set());
-  function toggleHave(key: string) {
-    setHaveKeys(prev => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
-  }
 
   // Derive a Set for O(1) lookups
   const grabbed = new Set(shoppingGrabbed);
@@ -388,12 +379,11 @@ function ShoppingTab() {
   const totalItems = displaySections.reduce((n, s) => n + s.items.filter(i => i.kind !== 'header').length, 0);
   const checkedItems = displaySections.reduce((n, s) =>
     n + s.items.filter(i => i.kind !== 'header').filter((item) => {
-      if (item.kind === 'single') return grabbed.has(item.key) || haveKeys.has(item.key);
+      if (item.kind === 'single') return grabbed.has(item.key);
       return !!(chosen as Record<string, string>)[(item as { groupKey: string }).groupKey];
     }).length, 0);
   const allChecked = totalItems > 0 && checkedItems === totalItems;
-  const uncheckedCount = totalItems - checkedItems;
-  const canSend = planEntries.length > 0;
+  const canSend = allChecked;
 
   function handleSendToLogPrep() {
     const preps = planEntries.flatMap((entry) => {
@@ -446,7 +436,7 @@ function ShoppingTab() {
     );
   }
 
-  const grabCount = [...grabbed].length + Object.values(chosen).filter(Boolean).length + [...haveKeys].filter(k => !grabbed.has(k)).length;
+  const grabCount = [...grabbed].length + Object.values(chosen).filter(Boolean).length;
 
   return (
     <div className="pb-20">
@@ -519,44 +509,31 @@ function ShoppingTab() {
 
                 if (item.kind === 'single') {
                   const isGrabbed = grabbed.has(item.key);
-                  const isOwned   = haveKeys.has(item.key);
-                  const isDone    = isGrabbed || isOwned;
                   return (
-                    <div key={item.key} className="flex items-center hover:bg-brand-muted/5 transition-colors">
-                      <button
-                        onClick={() => toggleGrabbed(item.key)}
-                        className="flex items-center gap-3 px-4 py-3 text-left flex-1 min-w-0"
-                      >
-                        <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                          isDone ? 'bg-brand-accent border-brand-accent' : 'border-brand-muted/30'
-                        }`}>
-                          {isDone && <span className="text-white text-xs font-bold">✓</span>}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className={`text-sm transition-colors ${isDone ? 'text-brand-muted/30 line-through' : 'text-brand-muted'}`}>
-                            {item.name}
-                          </span>
-                          {recipeLabel && (
-                            <span className="ml-2 text-xs text-brand-muted/35">{recipeLabel}</span>
-                          )}
-                        </div>
-                        {item.quantity && (
-                          <span className={`text-xs shrink-0 ${isDone ? 'text-brand-muted/20' : 'text-brand-muted/50'}`}>
-                            {item.quantity}
-                          </span>
+                    <button
+                      key={item.key}
+                      onClick={() => toggleGrabbed(item.key)}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-brand-muted/5 transition-colors"
+                    >
+                      <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                        isGrabbed ? 'bg-brand-accent border-brand-accent' : 'border-brand-muted/30'
+                      }`}>
+                        {isGrabbed && <span className="text-white text-xs font-bold">✓</span>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className={`text-sm transition-colors ${isGrabbed ? 'text-brand-muted/30 line-through' : 'text-brand-muted'}`}>
+                          {item.name}
+                        </span>
+                        {recipeLabel && (
+                          <span className="ml-2 text-xs text-brand-muted/35">{recipeLabel}</span>
                         )}
-                      </button>
-                      {/* "Have it" toggle — auto-checks without affecting unchecked count */}
-                      <button
-                        onClick={() => toggleHave(item.key)}
-                        title={isOwned ? 'Remove "have it"' : 'I already have this'}
-                        className={`px-3 py-3 text-[10px] font-medium shrink-0 transition-colors ${
-                          isOwned ? 'text-brand-accent/70' : 'text-brand-muted/20 hover:text-brand-muted/40'
-                        }`}
-                      >
-                        {isOwned ? '★' : '☆'}
-                      </button>
-                    </div>
+                      </div>
+                      {item.quantity && (
+                        <span className={`text-xs shrink-0 ${isGrabbed ? 'text-brand-muted/20' : 'text-brand-muted/50'}`}>
+                          {item.quantity}
+                        </span>
+                      )}
+                    </button>
                   );
                 }
 
@@ -620,9 +597,7 @@ function ShoppingTab() {
                 : 'bg-brand-surface/80 text-brand-muted/25 border border-brand-muted/10 cursor-not-allowed'
             }`}
           >
-            {allChecked || totalItems === 0
-              ? 'Send to Prep Queue'
-              : `Send to Prep Queue · ${uncheckedCount} item${uncheckedCount !== 1 ? 's' : ''} unchecked`}
+            Queue Prep
           </button>
         </div>
       </div>
