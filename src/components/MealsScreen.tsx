@@ -494,14 +494,20 @@ export default function MealsScreen({ onNavigate }: { onNavigate?: (tab: string)
           {desktopFiltered.length === 0 && available.length === 0 && (
             <div className="text-center py-16">
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/20 mx-auto mb-4">
-                <path d="M21 8l-9-5-9 5v8l9 5 9-5V8z" />
-                <path d="M3 8l9 5 9-5" />
-                <path d="M12 13v8" />
+                <path d="M6 10h12v7a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-7Z" />
+                <line x1="5" y1="10" x2="19" y2="10" />
+                <path d="M9 10V8.5C9 7.7 10.3 7 12 7s3 .7 3 1.5V10" />
               </svg>
-              <p className="font-medium text-brand-muted/60">Inventory empty</p>
-              <p className="text-sm mt-1.5 text-brand-muted/40">
-                Log a prep session to add meals to your inventory.
+              <p className="font-medium text-brand-muted/60">No meals in inventory</p>
+              <p className="text-sm mt-1.5 text-brand-muted/40 max-w-xs mx-auto">
+                Cook a batch and log it as a prep session to start tracking your meals.
               </p>
+              <button
+                onClick={() => onNavigate?.('prep')}
+                className="mt-4 text-sm font-medium text-brand-accent hover:text-brand-accent/80 transition-colors"
+              >
+                Log a prep session →
+              </button>
             </div>
           )}
 

@@ -577,9 +577,9 @@ export const useAppStore = create<AppState>()(
       return;
     }
     const sm = s.scheduledMeals.find(m => m.id === id);
-    if (sm?.date === today) {
-      const todayMeals = s.scheduledMeals.filter(m => m.date === today);
-      const dayDone = todayMeals.length > 0 && todayMeals.every(m => s.eatenScheduledIds.includes(m.id));
+    if (sm) {
+      const dayMeals = s.scheduledMeals.filter(m => m.date === sm.date);
+      const dayDone = dayMeals.length > 0 && dayMeals.every(m => s.eatenScheduledIds.includes(m.id));
       if (dayDone) {
         if (!s.unlockedMessageIds.includes('fs-2')) {
           unlockSpecific(set, get, 'fs-2');
@@ -659,7 +659,12 @@ export const useAppStore = create<AppState>()(
       }
     }
 
+    if (queued.length === 0) return;
     set((s) => ({ pendingPreps: [...s.pendingPreps, ...queued] }));
+    // fs-3: first time a plan is queued for prep
+    if (!get().unlockedMessageIds.includes('fs-3')) {
+      unlockSpecific(set, get, 'fs-3');
+    }
   },
 
   markPrepComplete: (pendingId, storage, finalSlotPicks, finalVariantId) => {
@@ -719,70 +724,7 @@ export const useAppStore = create<AppState>()(
   },
 
   // ── Prep ───────────────────────────────────────────────────
-  preparedMeals: [
-    {
-      id: 'demo-1',
-      prepEventId: 'pe-demo-1',
-      recipeId: 'protein-plate',
-      recipeName: 'Protein Plate',
-      variantName: 'Chicken breast · Brown rice · Asparagus',
-      servingsTotal: 4,
-      servingsRemaining: 2,
-      prepDate: format(addDays(new Date(), -3)),
-      storage: 'refrigerated',
-      nutrientsPerServing: { calories: 418, protein: 36, carbs: 44, fat: 8 },
-    },
-    {
-      id: 'demo-2',
-      prepEventId: 'pe-demo-2',
-      recipeId: 'protein-plate',
-      recipeName: 'Protein Plate',
-      variantName: 'Steak · Wild rice · Broccoli',
-      servingsTotal: 5,
-      servingsRemaining: 5,
-      prepDate: format(addDays(new Date(), -10)),
-      storage: 'frozen',
-      nutrientsPerServing: { calories: 482, protein: 41, carbs: 40, fat: 16 },
-    },
-    {
-      id: 'demo-3',
-      prepEventId: 'pe-demo-3',
-      recipeId: 'rice-bowl',
-      variantId: 'rb-japanese',
-      recipeName: 'Rice Bowl',
-      variantName: 'Japanese BBQ',
-      servingsTotal: 4,
-      servingsRemaining: 4,
-      prepDate: format(addDays(new Date(), -1)),
-      storage: 'refrigerated',
-      nutrientsPerServing: { calories: 524, protein: 24, carbs: 78, fat: 11 },
-    },
-    {
-      id: 'demo-4',
-      prepEventId: 'pe-demo-4',
-      recipeId: 'rice-bowl',
-      variantId: 'rb-mexican',
-      recipeName: 'Rice Bowl',
-      variantName: 'Mexican',
-      servingsTotal: 3,
-      servingsRemaining: 3,
-      prepDate: format(addDays(new Date(), -14)),
-      storage: 'frozen',
-      nutrientsPerServing: { calories: 578, protein: 21, carbs: 84, fat: 14 },
-    },
-    {
-      id: 'demo-5',
-      prepEventId: 'pe-demo-5',
-      recipeId: 'breakfast-burrito',
-      recipeName: 'Breakfast Burrito',
-      variantName: '',
-      servingsTotal: 6,
-      servingsRemaining: 5,
-      prepDate: format(addDays(new Date(), -2)),
-      storage: 'refrigerated',
-      nutrientsPerServing: { calories: 548, protein: 27, carbs: 46, fat: 24 },
-    },
-  ],
+  preparedMeals: [],
 
   logPrepEvent: (event) => {
     const recipe = get().recipes.find((r) => r.id === event.recipeId);
@@ -854,12 +796,7 @@ export const useAppStore = create<AppState>()(
   },
 
   // ── Schedule ───────────────────────────────────────────────
-  scheduledMeals: [
-    { id: 'sched-1', date: format(new Date()),                mealTime: 'lunch',     preparedMealId: 'demo-1' },
-    { id: 'sched-2', date: format(new Date()),                mealTime: 'breakfast', preparedMealId: 'demo-5' },
-    { id: 'sched-3', date: format(addDays(new Date(), 1)),    mealTime: 'lunch',     preparedMealId: 'demo-3' },
-    { id: 'sched-4', date: format(addDays(new Date(), 2)),    mealTime: 'lunch',     preparedMealId: 'demo-4' },
-  ],
+  scheduledMeals: [],
 
   scheduleMeal: (date, mealTime, preparedMealId) => {
     const existing = get().scheduledMeals.find((s) => s.date === date && s.mealTime === mealTime);
@@ -926,28 +863,10 @@ export const useAppStore = create<AppState>()(
   completeOnboarding: (prefs) => set({ onboardingComplete: true, userPrefs: prefs }),
   updateUserPrefs: (p) => set((s) => s.userPrefs ? { userPrefs: { ...s.userPrefs, ...p } } : {}),
 
-  // ── Stats (seeded with 5-week demo history) ───────────────
-  mealsEatenAllTime: 20,
-  prepSessionsLogged: 5,
-  mealEatenDates: (() => {
-    // Anchor each week to its Monday so dates are always in the correct
-    // Mon–Sun bucket regardless of what day today is.
-    const mon = (weeksAgo: number) =>
-      getMondayOfWeek(format(addDays(new Date(), -(weeksAgo * 7))));
-    const md = (weekMonday: string, dayOffset: number) =>
-      format(addDays(parseISO(weekMonday), dayOffset));
-    const m4 = mon(4); const m3 = mon(3); const m2 = mon(2);
-    const m1 = mon(1); const m0 = mon(0);
-    const today = format(new Date());
-    const dates = [
-      md(m4, 1), md(m4, 2), md(m4, 3),                      // week -4: 3 meals
-      md(m3, 0), md(m3, 1), md(m3, 2), md(m3, 3), md(m3, 4), // week -3: 5 meals
-      md(m2, 0), md(m2, 1), md(m2, 3), md(m2, 4),            // week -2: 4 meals
-      md(m1, 0), md(m1, 1), md(m1, 2), md(m1, 3), md(m1, 4), // week -1: 5 meals
-      md(m0, 0), md(m0, 1), md(m0, 2),                        // week  0: up to 3
-    ];
-    return dates.filter((d) => d <= today);
-  })(),
+  // ── Stats (start empty — earned by real user actions) ──────
+  mealsEatenAllTime: 0,
+  prepSessionsLogged: 0,
+  mealEatenDates: [],
 
   // ── Notifications ──────────────────────────────────────────
   notificationSettings: {
@@ -1009,15 +928,28 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'freshprep-store',
-      version: 3,
-      // When the version stored on device is older than current, reset
-      // recipes and ingredient library to the latest seed data.
+      version: 4,
       migrate: (persisted: any, storedVersion: number) => {
         if (storedVersion < 3) {
           return {
             ...persisted,
             recipes: SEED_RECIPES,
             ingredientLibrary: buildLibraryFromRecipes(SEED_RECIPES),
+          };
+        }
+        if (storedVersion < 4) {
+          // Remove seeded demo data — users now start with a clean slate
+          return {
+            ...persisted,
+            preparedMeals: [],
+            scheduledMeals: [],
+            eatenScheduledIds: [],
+            mealEatenDates: [],
+            mealsEatenAllTime: 0,
+            prepSessionsLogged: 0,
+            unlockedMessageIds: [],
+            pendingCelebrations: [],
+            prepEventDates: [],
           };
         }
         return persisted;

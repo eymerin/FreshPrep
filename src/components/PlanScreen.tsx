@@ -596,7 +596,7 @@ function ShoppingTab() {
                 : 'bg-brand-surface/80 text-brand-muted/25 border border-brand-muted/10 cursor-not-allowed'
             }`}
           >
-            Shopping Complete
+            Send to Prep Queue
           </button>
         </div>
       </div>
@@ -652,17 +652,34 @@ export default function PlanScreen({ onNavigate }: { onNavigate: (tab: string) =
       </button>
 
       {planEntries.length === 0 && (
-        <div className="text-center py-16">
+        <div className="text-center py-12">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/20 mx-auto mb-4">
-            <rect x="3" y="4" width="18" height="18" rx="2" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="3" y1="10" x2="21" y2="10" />
-            <line x1="9" y1="15" x2="15" y2="15" />
-            <line x1="12" y1="12" x2="12" y2="18" />
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+            <rect x="9" y="3" width="6" height="4" rx="1" />
+            <line x1="9" y1="12" x2="15" y2="12" />
+            <line x1="9" y1="16" x2="12" y2="16" />
           </svg>
-          <p className="font-medium text-brand-muted/60">Nothing planned yet</p>
-          <p className="text-sm mt-1 text-brand-muted/40">Tap above to add meals to this week's plan.</p>
+          {recipes.length === 0 ? (
+            <>
+              <p className="font-medium text-brand-muted/60">No recipes yet</p>
+              <p className="text-sm mt-1.5 text-brand-muted/40 max-w-xs mx-auto">
+                Build your first recipe before planning your week.
+              </p>
+              <button
+                onClick={() => onNavigate('recipes')}
+                className="mt-4 text-sm font-medium text-brand-accent hover:text-brand-accent/80 transition-colors"
+              >
+                Go to Recipes →
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="font-medium text-brand-muted/60">Nothing planned yet</p>
+              <p className="text-sm mt-1.5 text-brand-muted/40">
+                Tap "+ Add a meal" above to build this week's prep list.
+              </p>
+            </>
+          )}
         </div>
       )}
 

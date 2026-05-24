@@ -254,13 +254,10 @@ function MomentumZone() {
 
   if (prepSessionsLogged === 0 && mealsEatenAllTime === 0) return null;
 
-  const streak    = computeWeekStreak(mealEatenDates);
-  const weekDates = getWeekDates();
-  const weekEaten = mealEatenDates.filter((d) => weekDates.includes(d)).length;
+  const streak = computeWeekStreak(mealEatenDates);
 
   const stats = [
     { value: streak,             label: 'week streak' },
-    { value: weekEaten,          label: 'eaten this week' },
     { value: prepSessionsLogged, label: 'prep sessions' },
   ];
 
@@ -423,6 +420,34 @@ function DailyView({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
           })}
         </div>
       </div>
+
+      {/* ── FIRST-USE GUIDE (only shown when inventory is empty and nothing scheduled today) ── */}
+      {preparedMeals.filter(m => m.servingsRemaining > 0).length === 0 &&
+       !scheduledMeals.some(s => s.date === today) && (
+        <div className="mb-6 px-4 py-5 bg-brand-surface rounded-xl border border-brand-muted/10">
+          <p className="text-sm font-semibold text-brand-muted mb-3">How it works</p>
+          <div className="space-y-3">
+            {[
+              { step: '1', label: 'Plan', desc: 'Pick recipes and set how many meals you want to prep this week.', tab: 'plan' as const },
+              { step: '2', label: 'Prep', desc: 'Check off your shopping list, cook, and log the session.', tab: 'prep' as const },
+              { step: '3', label: 'Schedule', desc: 'Assign your prepped meals to days — then mark them eaten as you go.', tab: null },
+            ].map(({ step, label, desc, tab }) => (
+              <div key={step} className="flex gap-3 items-start">
+                <span className="w-5 h-5 rounded-full bg-brand-accent/20 text-brand-accent text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">{step}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-brand-muted leading-tight">{label}</p>
+                  <p className="text-xs text-brand-muted/45 mt-0.5 leading-relaxed">{desc}</p>
+                  {tab && (
+                    <button onClick={() => onNavigate(tab)} className="text-xs text-brand-accent font-medium mt-1 hover:text-brand-accent/80 transition-colors">
+                      Go to {label} →
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── TODAY'S NUTRITION ───────────────────────────────── */}
       <TodayMacros />

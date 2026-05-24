@@ -238,6 +238,7 @@ export default function PrepScreen() {
   const logPrepEvent       = useAppStore((s) => s.logPrepEvent);
   const pendingPreps       = useAppStore((s) => s.pendingPreps);
   const markPrepComplete   = useAppStore((s) => s.markPrepComplete);
+  const prepSessionsLogged = useAppStore((s) => s.prepSessionsLogged);
 
   const [recipeId, setRecipeId] = useState('');
   const [variantId, setVariantId] = useState('');
@@ -371,6 +372,19 @@ export default function PrepScreen() {
             <div className="border-t border-brand-muted/10 mt-6 pt-5">
               <p className="text-xs text-brand-muted/40 mb-4">Or log a different meal manually:</p>
             </div>
+          </div>
+        )}
+        {pendingPreps.length === 0 && prepSessionsLogged === 0 && !success && (
+          <div className="mb-6 px-4 py-5 bg-brand-surface rounded-xl border border-brand-muted/10 text-center">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-brand-muted/25 mx-auto mb-3">
+              <path d="M6 10h12v7a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-7Z" />
+              <line x1="5" y1="10" x2="19" y2="10" />
+              <path d="M9 10V8.5C9 7.7 10.3 7 12 7s3 .7 3 1.5V10" />
+            </svg>
+            <p className="text-sm font-medium text-brand-muted/60 mb-1">Nothing in your prep queue</p>
+            <p className="text-xs text-brand-muted/35 leading-relaxed">
+              Go to Plan, pick your meals for the week, and tap "Send to Prep Queue" when you're done shopping.
+            </p>
           </div>
         )}
         {success && <SuccessCard onDismiss={() => setSuccess(false)} />}
