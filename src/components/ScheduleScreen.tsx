@@ -745,7 +745,7 @@ function DesktopWeeklyGrid({
   const today = format(new Date());
 
   return (
-    <div className="grid grid-cols-7 gap-2">
+    <div className="grid grid-cols-7 gap-2" style={{ minHeight: 'calc(100vh - 260px)' }}>
       {weekDates.map((date) => {
         const isToday = date === today;
 
@@ -767,24 +767,24 @@ function DesktopWeeklyGrid({
             }`}
           >
             {/* Day header — name + date on one line */}
-            <div className={`px-2.5 pt-2.5 pb-2 shrink-0 ${isToday ? 'bg-brand-accent/10' : 'bg-brand-raised/40'}`}>
-              <p className={`text-xs font-semibold ${isToday ? 'text-brand-accent' : 'text-brand-muted/70'}`}>
+            <div className={`px-3 pt-3 pb-2.5 shrink-0 ${isToday ? 'bg-brand-accent/10' : 'bg-brand-raised/40'}`}>
+              <p className={`text-sm font-semibold ${isToday ? 'text-brand-accent' : 'text-brand-muted/80'}`}>
                 {getDayLabel(date)} {parseISO(date).getDate()}
               </p>
               {hasDayMacros ? (
-                <div className="flex flex-wrap gap-x-2 mt-1">
-                  <span className="text-[10px] text-brand-accent/80 font-medium">{Math.round(dayMacros.cal)} cal</span>
-                  <span className="text-[10px] text-brand-muted/40">{Math.round(dayMacros.pro)}g pro</span>
-                  <span className="text-[10px] text-brand-muted/40">{Math.round(dayMacros.carb)}g carb</span>
-                  <span className="text-[10px] text-brand-muted/40">{Math.round(dayMacros.fat)}g fat</span>
+                <div className="flex flex-wrap gap-x-2 mt-1.5">
+                  <span className="text-[11px] text-brand-accent/80 font-medium">{Math.round(dayMacros.cal)} cal</span>
+                  <span className="text-[11px] text-brand-muted/45">{Math.round(dayMacros.pro)}g pro</span>
+                  <span className="text-[11px] text-brand-muted/45">{Math.round(dayMacros.carb)}g carb</span>
+                  <span className="text-[11px] text-brand-muted/45">{Math.round(dayMacros.fat)}g fat</span>
                 </div>
               ) : (
-                <p className="text-[10px] text-brand-muted/25 mt-1">No meals</p>
+                <p className="text-[11px] text-brand-muted/25 mt-1">No meals</p>
               )}
             </div>
 
-            {/* Meal slots */}
-            <div className="p-1.5 space-y-1 flex-1">
+            {/* Meal slots — flex-1 so columns fill available height, each slot flex-1 */}
+            <div className="p-2 flex flex-col gap-2 flex-1">
               {MEAL_TIMES.map((mealTime) => {
                 const scheduled = scheduledMeals.find(s => s.date === date && s.mealTime === mealTime);
                 const meal      = scheduled ? preparedMeals.find(m => m.id === scheduled.preparedMealId) : undefined;
@@ -798,7 +798,7 @@ function DesktopWeeklyGrid({
                   return (
                     <div
                       key={mealTime}
-                      className={`px-2 py-2 rounded-lg border ${
+                      className={`flex-1 px-2.5 py-2.5 rounded-lg border ${
                         isTarget
                           ? 'border-brand-accent bg-brand-accent/10'
                           : isExpiring
@@ -806,27 +806,27 @@ function DesktopWeeklyGrid({
                           : 'border-brand-muted/10 bg-brand-bg/60'
                       }`}
                     >
-                      <p className="text-[10px] text-brand-muted/40 uppercase tracking-wide leading-none mb-1">
+                      <p className="text-[11px] text-brand-muted/40 uppercase tracking-wide leading-none mb-1.5">
                         {MEAL_TIME_LABELS[mealTime]}
                       </p>
-                      <p className="text-[12px] font-semibold text-brand-muted leading-tight">
+                      <p className="text-sm font-semibold text-brand-muted leading-tight">
                         {meal.recipeName}
                       </p>
                       {meal.variantName && meal.variantName !== meal.recipeName && (
-                        <p className="text-[10px] text-brand-muted/50 mt-0.5">{meal.variantName}</p>
+                        <p className="text-xs text-brand-muted/50 mt-0.5">{meal.variantName}</p>
                       )}
                       {n && (
-                        <div className="flex flex-wrap gap-x-2 mt-1.5 text-[10px] text-brand-muted/45">
-                          <span className="font-medium text-brand-muted/70">{Math.round(n.calories)} cal</span>
+                        <div className="flex flex-wrap gap-x-2 mt-2 text-[11px] text-brand-muted/50">
+                          <span className="font-medium text-brand-muted/75">{Math.round(n.calories)} cal</span>
                           <span>{Math.round(n.protein)}g pro</span>
                           <span>{Math.round(n.carbs)}g carb</span>
                           <span>{Math.round(n.fat)}g fat</span>
                         </div>
                       )}
                       {(isEaten || isExpiring) && (
-                        <div className="flex items-center gap-1.5 mt-1">
-                          {isEaten    && <span className="text-[10px] text-brand-accent/80 font-medium">✓ Eaten</span>}
-                          {isExpiring && <span className="text-[10px] text-amber-400 font-medium">! Expiring</span>}
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          {isEaten    && <span className="text-[11px] text-brand-accent/80 font-medium">✓ Eaten</span>}
+                          {isExpiring && <span className="text-[11px] text-amber-400 font-medium">! Expiring</span>}
                         </div>
                       )}
                     </div>
@@ -837,16 +837,16 @@ function DesktopWeeklyGrid({
                   <button
                     key={mealTime}
                     onClick={() => onSlotClick(date, mealTime)}
-                    className={`w-full px-2 py-2 rounded-lg border border-dashed transition-colors text-left ${
+                    className={`flex-1 w-full px-2.5 py-2.5 rounded-lg border border-dashed transition-colors text-left ${
                       isTarget
                         ? 'border-brand-accent bg-brand-accent/10'
                         : 'border-brand-muted/15 hover:border-brand-accent/40 hover:bg-brand-accent/5'
                     }`}
                   >
-                    <p className="text-[10px] text-brand-muted/40 uppercase tracking-wide leading-none mb-1">
+                    <p className="text-[11px] text-brand-muted/40 uppercase tracking-wide leading-none mb-1.5">
                       {MEAL_TIME_LABELS[mealTime]}
                     </p>
-                    <p className={`text-[11px] transition-colors ${isTarget ? 'text-brand-accent font-medium' : 'text-brand-muted/25'}`}>
+                    <p className={`text-xs transition-colors ${isTarget ? 'text-brand-accent font-medium' : 'text-brand-muted/25'}`}>
                       {isTarget ? 'Select from inventory →' : '+ Add meal'}
                     </p>
                   </button>
