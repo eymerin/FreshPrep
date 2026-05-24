@@ -210,7 +210,6 @@ function ShoppingTab() {
 
   const sortMode = useAppStore((s) => s.shoppingSortMode);
   const setSortMode = useAppStore((s) => s.setShoppingSortMode);
-  const [confirmReset, setConfirmReset] = useState(false);
 
   // Derive a Set for O(1) lookups
   const grabbed = new Set(shoppingGrabbed);
@@ -444,20 +443,6 @@ function ShoppingTab() {
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs text-brand-muted/50">{grabCount} of {totalItems} checked</p>
         <div className="flex items-center gap-3">
-          {(shoppingGrabbed.length > 0 || Object.values(chosen).some(Boolean)) && (
-            confirmReset ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-brand-muted/50">Clear all progress?</span>
-                <button onClick={() => { resetShoppingState(); setConfirmReset(false); userExpandedRef.current.clear(); }}
-                  className="text-xs text-red-400 font-medium">Yes</button>
-                <button onClick={() => setConfirmReset(false)}
-                  className="text-xs text-brand-muted/40">No</button>
-              </div>
-            ) : (
-              <button onClick={() => setConfirmReset(true)}
-                className="text-xs text-brand-muted/40 hover:text-brand-muted transition-colors">Reset</button>
-            )
-          )}
           <div className="flex bg-brand-surface rounded-md border border-brand-muted/15 p-0.5">
             <button onClick={() => setSortMode('recipe')}
               className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${sortMode === 'recipe' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/40 hover:text-brand-muted/70'}`}>

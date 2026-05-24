@@ -70,6 +70,8 @@ export default function StatsContent() {
   });
   const maxCount = Math.max(...weeks.map(w => w.count), userPrefs?.mealsPerWeek ?? 5);
 
+  const hitRate = activeWeeks > 0 ? Math.round((weeksOnTarget / activeWeeks) * 100) : 0;
+
   return (
     <div className="space-y-7">
       <div>
@@ -79,7 +81,17 @@ export default function StatsContent() {
           <Stat value={sl(bestStreak)} unit={su(bestStreak)} label="best streak" />
           <Stat value={activeWeeks} unit={activeWeeks === 1 ? 'wk' : 'wks'} label="active weeks total" wide />
         </div>
-        {atPeak && currentStreak > 1 && <p className="text-xs text-brand-accent/70 mt-2.5">Current streak matches your all-time best.</p>}
+        <p className="text-xs text-brand-muted/45 mt-2.5 leading-relaxed">
+          {atPeak && currentStreak > 1
+            ? `${currentStreak}-week streak — your best ever. Keep it going.`
+            : currentStreak > 0 && bestStreak > currentStreak
+            ? `${currentStreak}-week streak, ${bestStreak - currentStreak} week${bestStreak - currentStreak !== 1 ? 's' : ''} short of your best.`
+            : currentStreak === 0 && activeWeeks > 0
+            ? 'No active streak this week — log a meal to restart.'
+            : activeWeeks === 0
+            ? 'Eat a prepped meal to start your first streak.'
+            : `${currentStreak} week${currentStreak !== 1 ? 's' : ''} and counting.`}
+        </p>
 
         {/* Weekly bar chart — last 10 weeks */}
         <div className="grid grid-cols-10 gap-1.5 items-end h-20 mt-3 px-1">
@@ -118,6 +130,13 @@ export default function StatsContent() {
             <Stat value={weekEaten} label="eaten this week" />
             <Stat value={mealsEatenAllTime} label="total meals eaten from prep" wide />
           </div>
+          <p className="text-xs text-brand-muted/45 mt-2.5 leading-relaxed">
+            {prepSessionsLogged === 0
+              ? 'Log your first prep session to start tracking.'
+              : mealsEatenAllTime === 0
+              ? 'Meals prepped but none eaten yet — schedule and mark them as eaten.'
+              : `${mealsEatenAllTime} meal${mealsEatenAllTime !== 1 ? 's' : ''} eaten across ${prepSessionsLogged} prep session${prepSessionsLogged !== 1 ? 's' : ''}.`}
+          </p>
         </div>
         <div>
           <SectionHead
@@ -126,8 +145,17 @@ export default function StatsContent() {
           />
           <div className="grid grid-cols-2 gap-2">
             <Stat value={weeksOnTarget} label="weeks on target" />
-            <Stat value={activeWeeks > 0 ? `${Math.round((weeksOnTarget / activeWeeks) * 100)}%` : '—'} label="hit rate" />
+            <Stat value={activeWeeks > 0 ? `${hitRate}%` : '—'} label="hit rate" />
           </div>
+          <p className="text-xs text-brand-muted/45 mt-2.5 leading-relaxed">
+            {activeWeeks === 0
+              ? 'Complete a week with prepped meals to see your planning rate.'
+              : hitRate >= 80
+              ? `${hitRate}% hit rate — highly consistent. Your planning is working.`
+              : hitRate >= 50
+              ? `${hitRate}% hit rate across ${activeWeeks} active week${activeWeeks !== 1 ? 's' : ''}. Room to grow.`
+              : `${hitRate}% hit rate. Try reducing your weekly target to build the habit first.`}
+          </p>
         </div>
       </div>
     </div>

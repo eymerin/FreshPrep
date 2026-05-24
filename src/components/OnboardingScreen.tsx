@@ -3,22 +3,24 @@ import { useAppStore } from '../store';
 import { UserPrefs } from '../types';
 
 type PrepFreq = UserPrefs['prepFrequency'];
-type MealType = 'breakfast' | 'lunch' | 'dinner';
+type MealType = 'breakfast' | 'lunch' | 'snack' | 'dinner';
 
 const MEAL_COUNTS = [3, 5, 7] as const;
 
 const MEAL_TYPE_OPTIONS: { id: MealType; label: string }[] = [
   { id: 'breakfast', label: 'Breakfast' },
   { id: 'lunch',     label: 'Lunch' },
+  { id: 'snack',     label: 'Snack' },
   { id: 'dinner',    label: 'Dinner' },
 ];
 
 function formatMealTypes(types: MealType[]): string {
-  const ordered = (['breakfast', 'lunch', 'dinner'] as MealType[]).filter((t) => types.includes(t));
+  const ordered = (['breakfast', 'lunch', 'snack', 'dinner'] as MealType[]).filter((t) => types.includes(t));
   if (ordered.length === 0) return 'meals';
   if (ordered.length === 1) return ordered[0];
   if (ordered.length === 2) return `${ordered[0]} & ${ordered[1]}`;
-  return 'breakfast, lunch & dinner';
+  if (ordered.length === 3) return `${ordered[0]}, ${ordered[1]} & ${ordered[2]}`;
+  return 'breakfast, lunch, snack & dinner';
 }
 
 const FREQ_OPTIONS: { id: PrepFreq; label: string; sub: string }[] = [
@@ -73,8 +75,12 @@ export default function OnboardingScreen() {
     );
   }
 
+  const deleteRecipe = useAppStore((s) => s.deleteRecipe);
+
   function handleFinish() {
     completeOnboarding({ mealsPerWeek: finalMeals, mealTypes, prepFrequency });
+    // Remove seed recipes that don't match the user's selected meal types
+    if (!mealTypes.includes('breakfast')) deleteRecipe('breakfast-burrito');
   }
 
   // ── Step 1: Welcome ─────────────────────────────────────────
@@ -255,13 +261,13 @@ export default function OnboardingScreen() {
         <div className="flex items-start gap-3">
           <span className="text-brand-accent mt-0.5 text-xs">●</span>
           <p className="text-sm text-brand-muted">
-            <span className="font-medium">3 starter recipes</span> ready to use
+            <span className="font-medium">{mealTypes.includes('breakfast') ? '3' : '2'} starter recipes</span> ready to explore
           </p>
         </div>
       </div>
 
       {/* First steps */}
-      <div className="mb-5">
+      <div className="mb-8">
         <p className="text-xs font-semibold text-brand-muted/40 uppercase tracking-wide mb-3">Your first steps</p>
         <div className="space-y-2">
           {[
@@ -277,17 +283,6 @@ export default function OnboardingScreen() {
               <span className="text-xs text-brand-muted/35 shrink-0">{item.where}</span>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Collectible cards teaser */}
-      <div className="mb-8 rounded-xl border border-brand-accent/25 bg-brand-accent/8 p-4 flex gap-3">
-        <div className="text-xl mt-0.5 shrink-0">🥘</div>
-        <div>
-          <p className="text-sm font-semibold text-brand-muted leading-snug">You'll earn collectible cards as you go</p>
-          <p className="text-xs text-brand-muted/55 mt-1 leading-relaxed">
-            Log a prep session, eat a full planned day, or keep a streak — and you'll unlock one of 60 unique cards. They live in your profile whenever you want to revisit them.
-          </p>
         </div>
       </div>
 

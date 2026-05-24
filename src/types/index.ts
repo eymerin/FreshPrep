@@ -28,7 +28,7 @@ export interface FoodRecord {
 
 export interface UserPrefs {
   mealsPerWeek: number;
-  mealTypes: ('breakfast' | 'lunch' | 'dinner')[];
+  mealTypes: ('breakfast' | 'lunch' | 'snack' | 'dinner')[];
   prepFrequency: '1x' | '2x' | 'flexible';
 }
 
