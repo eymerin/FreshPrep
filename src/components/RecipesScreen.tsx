@@ -1636,8 +1636,6 @@ function RecipeDetail({ recipe, onBack }: { recipe: Recipe; onBack: () => void }
         </div>
       </div>
 
-      <TagEditor recipe={liveRecipe} />
-
       {liveRecipe.type === 'composed' ? (
         <>
           <SlotManager recipe={liveRecipe} />
@@ -1754,6 +1752,8 @@ function RecipeDetail({ recipe, onBack }: { recipe: Recipe; onBack: () => void }
           </div>
         </>
       )}
+
+      <TagEditor recipe={liveRecipe} />
     </div>
   );
 }
@@ -2138,26 +2138,85 @@ function RecipeList({ onSelect }: { onSelect: (id: string) => void }) {
               <div className="flex flex-col gap-1">
                 {desktopVisibleRecipes.map((recipe) => {
                   const { linked, total } = recipe.type === 'standard' ? ingredientNutritionCoverage(recipe) : { linked: 0, total: 0 };
-                  const displayTags = recipe.tags?.slice(0, 3) ?? [];
+                  const displayTags = recipe.tags?.slice(0, 2) ?? [];
+                  const serves = recipe.serves ?? 4;
+
+                  // Compute per-serving macros from base ingredients
+                  let perMeal: NutrientInfo | null = null;
+                  if (recipe.type === 'standard' && linked > 0) {
+                    const parts = computeBaseNutrients(recipe);
+                    const total = sumNutrients(parts);
+                    perMeal = scaleNutrients(total, 1 / serves);
+                  } else if (recipe.type === 'composed') {
+                    const range = composedCalRange(recipe);
+                    if (range) {
+                      perMeal = { calories: Math.round((range.min + range.max) / 2), protein: 0, carbs: 0, fat: 0 };
+                    }
+                  }
+
                   return (
                     <button key={recipe.id} onClick={() => onSelect(recipe.id)}
-                      className="w-full bg-brand-surface rounded-lg border border-brand-muted/15 px-4 py-3 text-left hover:bg-brand-muted/5 transition-colors flex items-center gap-4">
-                      <div className="flex-1 min-w-0">
+                      className="w-full bg-brand-surface rounded-lg border border-brand-muted/15 px-4 py-2.5 text-left hover:bg-brand-muted/5 transition-colors flex items-center gap-4">
+                      {/* Name + description */}
+                      <div className="min-w-0" style={{ width: '28%' }}>
                         <p className="font-medium text-brand-muted text-sm truncate">{recipe.name}</p>
                         {recipe.description && <p className="text-xs text-brand-muted/50 truncate">{recipe.description}</p>}
                       </div>
-                      {displayTags.length > 0 && (
-                        <div className="flex gap-1 shrink-0">
-                          {displayTags.slice(0, 2).map(tag => (
-                            <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-bg border border-brand-muted/15 text-brand-muted/50">{tag}</span>
-                          ))}
+                      {/* Tags */}
+                      <div className="flex gap-1 shrink-0" style={{ width: '18%' }}>
+                        {displayTags.map(tag => (
+                          <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-bg border border-brand-muted/15 text-brand-muted/50 whitespace-nowrap">{tag}</span>
+                        ))}
+                      </div>
+                      {/* Macros */}
+                      {perMeal ? (
+                        <div className="flex gap-5 shrink-0" style={{ width: '36%' }}>
+                          {recipe.type === 'composed' ? (
+                            <>
+                              <div className="flex flex-col min-w-[48px]">
+                                <span className="text-sm font-semibold text-brand-muted leading-none">
+                                  {(() => { const r = composedCalRange(recipe); return r ? `${r.min}–${r.max}` : '—'; })()}
+                                </span>
+                                <span className="text-[10px] text-brand-muted/40 mt-0.5">cal range</span>
+                              </div>
+                              <span className="text-xs text-brand-muted/30 self-center">Build-Your-Own</span>
+                            </>
+                          ) : (
+                            [
+                              { val: Math.round(perMeal.calories), label: 'cal' },
+                              { val: Math.round(perMeal.protein),  label: 'protein' },
+                              { val: Math.round(perMeal.carbs),    label: 'carbs' },
+                              { val: Math.round(perMeal.fat),      label: 'fat' },
+                            ].map(({ val, label }) => (
+                              <div key={label} className="flex flex-col min-w-[32px]">
+                                <span className="text-sm font-semibold text-brand-muted leading-none">
+                                  {val}{label !== 'cal' ? 'g' : ''}
+                                </span>
+                                <span className="text-[10px] text-brand-muted/40 mt-0.5">{label}</span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 shrink-0" style={{ width: '36%' }}>
+                          <span className={`text-xs ${linked < total && total > 0 ? 'text-brand-muted/30' : 'text-brand-muted/20'}`}>
+                            {total > 0 ? `○ ${linked}/${total} ingredients tracked` : 'No nutrition data'}
+                          </span>
                         </div>
                       )}
-                      <span className="text-xs text-brand-muted/30 shrink-0">
-                        {recipe.type === 'composed' ? 'BYO' : `${recipe.serves ?? 4} meals`}
-                      </span>
-                      {total > 0 && <span className={`text-xs shrink-0 ${linked === total ? 'text-emerald-400/70' : 'text-brand-muted/30'}`}>{linked === total ? '●' : `○ ${linked}/${total}`}</span>}
-                      <span className="text-brand-muted/30 text-xs shrink-0">→</span>
+                      {/* Meta + arrow */}
+                      <div className="flex items-center gap-3 shrink-0 ml-auto">
+                        <span className="text-xs text-brand-muted/30">
+                          {recipe.type === 'composed' ? `${recipe.slots?.length ?? 0} slots` : `${recipe.serves ?? 4} meals`}
+                        </span>
+                        {perMeal && linked < total && total > 0 && (
+                          <span className="text-[10px] text-brand-muted/30">○ {linked}/{total}</span>
+                        )}
+                        {perMeal && linked === total && total > 0 && (
+                          <span className="text-[10px] text-emerald-400/60">●</span>
+                        )}
+                        <span className="text-brand-muted/30 text-xs">→</span>
+                      </div>
                     </button>
                   );
                 })}

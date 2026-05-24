@@ -151,25 +151,48 @@ function MealCard({
   const storageLabel = isFridge ? 'Fridge' : 'Frozen';
 
   if (viewMode === 'list') {
+    const n = meal.nutrientsPerServing;
     return (
-      <div className="bg-brand-surface rounded-lg border border-brand-muted/15 px-4 py-3 flex items-center gap-4">
-        <div className="flex-1 min-w-0">
+      <div className="bg-brand-surface rounded-lg border border-brand-muted/15 px-4 py-2.5 flex items-center gap-4">
+        {/* Name + variant */}
+        <div className="min-w-0" style={{ width: '22%' }}>
           <p className="font-semibold text-brand-muted text-sm leading-tight truncate">{meal.recipeName}</p>
           {meal.variantName && meal.variantName !== meal.recipeName && (
             <p className="text-xs text-brand-muted/50 truncate">{meal.variantName}</p>
           )}
         </div>
-        <span className="flex items-center gap-1.5 text-xs font-medium text-brand-muted/60 shrink-0">
-          <span className={`w-1.5 h-1.5 rounded-full ${storageChipDot}`} />
-          {storageLabel}
-        </span>
-        <span className="text-xs text-brand-muted/50 shrink-0">{meal.servingsRemaining} srv</span>
-        {meal.nutrientsPerServing && (
-          <span className="text-xs text-brand-muted/50 shrink-0">
-            {Math.round(meal.nutrientsPerServing.calories)} cal
+        {/* Storage + servings */}
+        <div className="flex items-center gap-3 shrink-0" style={{ width: '14%' }}>
+          <span className="flex items-center gap-1.5 text-xs font-medium text-brand-muted/60">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${storageChipDot}`} />
+            {storageLabel}
           </span>
+          <span className="text-xs text-brand-muted/40">{meal.servingsRemaining} srv</span>
+        </div>
+        {/* Macros — 4 columns */}
+        {n ? (
+          <div className="flex gap-5 shrink-0" style={{ width: '38%' }}>
+            {[
+              { val: Math.round(n.calories), label: 'cal' },
+              { val: Math.round(n.protein),  label: 'protein' },
+              { val: Math.round(n.carbs),    label: 'carbs' },
+              { val: Math.round(n.fat),      label: 'fat' },
+            ].map(({ val, label }) => (
+              <div key={label} className="flex flex-col min-w-[36px]">
+                <span className="text-sm font-semibold text-brand-muted leading-none">
+                  {val}{label !== 'cal' ? 'g' : ''}
+                </span>
+                <span className="text-[10px] text-brand-muted/40 mt-0.5">{label}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex-1" style={{ width: '38%' }}>
+            <span className="text-xs text-brand-muted/25 italic">No nutrition data</span>
+          </div>
         )}
-        <div className="flex gap-2 shrink-0">
+        {/* Actions */}
+        <div className="flex gap-2 shrink-0 ml-auto">
           <button
             onClick={onSchedule}
             disabled={unassigned <= 0}
