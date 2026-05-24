@@ -388,7 +388,7 @@ function ShoppingTab() {
   const totalItems = displaySections.reduce((n, s) => n + s.items.filter(i => i.kind !== 'header').length, 0);
   const checkedItems = displaySections.reduce((n, s) =>
     n + s.items.filter(i => i.kind !== 'header').filter((item) => {
-      if (item.kind === 'single') return grabbed.has(item.key);
+      if (item.kind === 'single') return grabbed.has(item.key) || haveKeys.has(item.key);
       return !!(chosen as Record<string, string>)[(item as { groupKey: string }).groupKey];
     }).length, 0);
   const allChecked = totalItems > 0 && checkedItems === totalItems;
@@ -446,7 +446,7 @@ function ShoppingTab() {
     );
   }
 
-  const grabCount = [...grabbed].length + Object.values(chosen).filter(Boolean).length;
+  const grabCount = [...grabbed].length + Object.values(chosen).filter(Boolean).length + [...haveKeys].filter(k => !grabbed.has(k)).length;
 
   return (
     <div className="pb-20">

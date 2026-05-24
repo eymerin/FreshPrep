@@ -381,13 +381,16 @@ function DailyView({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
     markScheduledEaten(scheduledId);
   }
 
+  const mealsEatenAllTime  = useAppStore((s) => s.mealsEatenAllTime);
+  const prepSessionsLogged = useAppStore((s) => s.prepSessionsLogged);
   const hasInventory = preparedMeals.filter(m => m.servingsRemaining > 0).length > 0;
   const hasTodayScheduled = scheduledMeals.some(s => s.date === today);
+  const isFirstTimeUser = mealsEatenAllTime === 0 && prepSessionsLogged === 0;
 
   return (
     <div>
-      {/* ── FIRST-USE GUIDE — shown before slots when inventory is empty ── */}
-      {!hasInventory && !hasTodayScheduled && (
+      {/* ── FIRST-USE GUIDE — only for brand new users, not returning users who've eaten everything ── */}
+      {isFirstTimeUser && !hasInventory && !hasTodayScheduled && (
         <div className="mb-6 px-4 py-5 bg-brand-surface rounded-xl border border-brand-muted/10">
           <p className="text-sm font-semibold text-brand-muted mb-3">How it works</p>
           <div className="space-y-3">
