@@ -224,7 +224,10 @@ function MealCard({
       <div className="flex gap-[14px] flex-wrap text-[11px] text-brand-muted/50">
         <span>Prepped {formatDisplay(meal.prepDate)}</span>
         <span><span className="font-semibold text-brand-muted">{meal.servingsRemaining}</span> servings</span>
-        <span><span className="font-semibold text-brand-muted">{unassigned}</span> unscheduled</span>
+        {unassigned > 0
+          ? <span><span className="font-semibold text-brand-muted">{unassigned}</span> unscheduled</span>
+          : <span className="text-brand-muted/35">Fully scheduled</span>
+        }
       </div>
 
       {/* 3. Freshness block — status pill + days/date, then progress bar */}
@@ -241,9 +244,9 @@ function MealCard({
       </div>
 
       {/* 4. Macros mini — border-top, 4 stacked value/label columns */}
-      {meal.nutrientsPerServing && (
-        <div className="flex gap-[12px] pt-[10px] border-t border-brand-muted/[0.08] text-[11px] text-brand-muted/50">
-          {[
+      <div className="flex gap-[12px] pt-[10px] border-t border-brand-muted/[0.08] text-[11px] text-brand-muted/50">
+        {meal.nutrientsPerServing ? (
+          [
             { val: Math.round(meal.nutrientsPerServing.calories), label: 'cal' },
             { val: Math.round(meal.nutrientsPerServing.protein),  label: 'protein' },
             { val: Math.round(meal.nutrientsPerServing.carbs),    label: 'carbs' },
@@ -253,9 +256,11 @@ function MealCard({
               <span className="text-[12px] font-semibold text-brand-muted">{val}{label !== 'cal' ? 'g' : ''}</span>
               <span>{label}</span>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        ) : (
+          <span className="text-brand-muted/25 italic">No nutrition data</span>
+        )}
+      </div>
 
       {/* 5. Actions — border-top, Schedule (flex-1) + trash icon */}
       <div className="flex gap-[6px] pt-[10px] border-t border-brand-muted/[0.08]">
@@ -265,15 +270,10 @@ function MealCard({
           className={`flex-1 py-[5px] px-[10px] text-[12px] font-semibold rounded-lg transition-colors ${
             unassigned > 0
               ? 'bg-brand-accent text-white hover:bg-brand-accent/80'
-              : 'text-brand-muted/30 cursor-not-allowed'
+              : 'border border-brand-muted/15 text-brand-muted/30 cursor-not-allowed'
           }`}
         >
-          {unassigned > 0 ? 'Schedule' : (
-            <span className="flex items-center justify-center gap-1.5">
-              Fully scheduled
-              {isExpiringSoon && <span className="text-amber-400 font-bold">· eat soon</span>}
-            </span>
-          )}
+          {unassigned > 0 ? 'Schedule' : 'Fully scheduled'}
         </button>
         {confirmRemoveId === meal.id ? (
           <div className="flex items-center gap-1.5">
