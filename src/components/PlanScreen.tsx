@@ -575,7 +575,7 @@ function ShoppingTab() {
                 : 'bg-brand-surface/80 text-brand-muted/25 border border-brand-muted/10 cursor-not-allowed'
             }`}
           >
-            Queue Prep
+            Finish Shopping
           </button>
         </div>
       </div>
