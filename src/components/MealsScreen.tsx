@@ -206,11 +206,8 @@ function MealCard({
   return (
     <div className="bg-brand-surface rounded-xl border border-brand-muted/15 p-4 flex flex-col gap-[11px] relative">
 
-      {/* Absolute checkbox — top: 12px; right: 12px */}
-      <div className="absolute top-3 right-3 w-[18px] h-[18px] border-[1.5px] border-brand-muted/25 rounded-[4px] bg-brand-bg z-[1]" />
-
-      {/* 1. Head — name + variant left, storage pill right; pr-[26px] clears checkbox */}
-      <div className="flex items-start justify-between gap-[10px] pr-[26px]">
+      {/* 1. Head — name + variant left, storage pill right */}
+      <div className="flex items-start justify-between gap-[10px]">
         <div>
           <p className="text-[14px] font-semibold text-brand-muted leading-[1.25]">{meal.recipeName}</p>
           {meal.variantName && meal.variantName !== meal.recipeName && (
