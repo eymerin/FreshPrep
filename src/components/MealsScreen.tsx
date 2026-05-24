@@ -426,8 +426,8 @@ export default function MealsScreen({ onNavigate }: { onNavigate?: (tab: string)
       {/* Toolbar (view + sort) */}
       {available.length > 0 && (
         <div className="flex items-center justify-between gap-3 mb-4">
-          {/* View toggle */}
-          <div className="flex bg-brand-surface rounded-lg border border-brand-muted/15 p-0.5">
+          {/* View toggle — desktop only */}
+          <div className="hidden lg:flex bg-brand-surface rounded-lg border border-brand-muted/15 p-0.5">
             <button
               onClick={() => setViewMode('card')}
               className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'card' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/40 hover:text-brand-muted/70'}`}
