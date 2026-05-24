@@ -60,33 +60,55 @@ function AssignModal({ date, mealTime, onClose }: { date: string; mealTime: Meal
 }
 
 function SwapModal({ scheduledMealId, onClose }: { scheduledMealId: string; onClose: () => void }) {
-  const preparedMeals = useAppStore((s) => s.preparedMeals);
-  const scheduledMeals = useAppStore((s) => s.scheduledMeals);
-  const swapScheduledMeal = useAppStore((s) => s.swapScheduledMeal);
+  const preparedMeals      = useAppStore((s) => s.preparedMeals);
+  const scheduledMeals     = useAppStore((s) => s.scheduledMeals);
+  const swapScheduledMeal  = useAppStore((s) => s.swapScheduledMeal);
   const getFreshnessStatus = useAppStore((s) => s.getFreshnessStatus);
+  const getDaysRemaining   = useAppStore((s) => s.getDaysRemaining);
 
-  const available = preparedMeals.filter((m) => {
-    if (m.servingsRemaining <= 0 || getFreshnessStatus(m) === 'expired') return false;
-    return m.servingsRemaining - scheduledMeals.filter((s) => s.preparedMealId === m.id).length > 0;
-  });
+  const available = preparedMeals
+    .filter((m) => {
+      if (m.servingsRemaining <= 0 || getFreshnessStatus(m) === 'expired') return false;
+      return m.servingsRemaining - scheduledMeals.filter((s) => s.preparedMealId === m.id).length > 0;
+    })
+    .sort((a, b) => getDaysRemaining(a) - getDaysRemaining(b)); // expiring first
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-brand-surface border border-brand-raised/40 rounded-xl w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-brand-raised/30 flex items-center justify-between">
-          <h3 className="font-semibold text-brand-muted">Swap Meal</h3>
-          <button onClick={onClose} className="text-brand-muted/40 hover:text-brand-muted text-lg leading-none">×</button>
+          <div>
+            <h3 className="font-semibold text-brand-muted">Swap Meal</h3>
+            <p className="text-xs text-brand-muted/40 mt-0.5">Sorted by urgency — eat expiring meals first</p>
+          </div>
+          <button onClick={onClose} className="text-brand-muted/40 hover:text-brand-muted text-lg leading-none ml-3">×</button>
         </div>
         <div className="p-4 space-y-2 max-h-72 overflow-y-auto">
           {available.length === 0 && <p className="text-sm text-brand-muted/50 text-center py-4">No available meals.</p>}
-          {available.map((meal) => (
-            <button key={meal.id} onClick={() => { swapScheduledMeal(scheduledMealId, meal.id); onClose(); }}
-              className="w-full text-left px-3 py-3 rounded-lg border border-brand-raised/30 hover:border-brand-accent hover:bg-brand-accent/10 transition-colors">
-              <p className="text-sm font-medium text-brand-muted">{meal.recipeName}</p>
-              {mealSubtitle(meal) && <p className="text-xs text-brand-muted/50">{mealSubtitle(meal)}</p>}
-              <p className="text-xs text-brand-muted/50 mt-0.5">{meal.storage === 'refrigerated' ? 'Fridge' : 'Frozen'}</p>
-            </button>
-          ))}
+          {available.map((meal) => {
+            const status = getFreshnessStatus(meal);
+            const days   = getDaysRemaining(meal);
+            const isExpiring = status === 'expiring';
+            return (
+              <button key={meal.id} onClick={() => { swapScheduledMeal(scheduledMealId, meal.id); onClose(); }}
+                className={`w-full text-left px-3 py-3 rounded-lg border transition-colors hover:border-brand-accent hover:bg-brand-accent/10 ${
+                  isExpiring ? 'border-amber-600/40 bg-amber-900/10' : 'border-brand-raised/30'
+                }`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-brand-muted">{meal.recipeName}</p>
+                    {mealSubtitle(meal) && <p className="text-xs text-brand-muted/50 truncate">{mealSubtitle(meal)}</p>}
+                  </div>
+                  <span className={`text-[11px] font-semibold shrink-0 ${isExpiring ? 'text-amber-400' : 'text-brand-muted/40'}`}>
+                    {days > 0 ? `${days}d left` : 'Expires today'}
+                  </span>
+                </div>
+                <p className="text-xs text-brand-muted/40 mt-1">
+                  {meal.storage === 'refrigerated' ? 'Fridge' : 'Frozen'} · {meal.servingsRemaining} serving{meal.servingsRemaining !== 1 ? 's' : ''}
+                </p>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -351,8 +373,38 @@ function DailyView({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
     markScheduledEaten(scheduledId);
   }
 
+  const hasInventory = preparedMeals.filter(m => m.servingsRemaining > 0).length > 0;
+  const hasTodayScheduled = scheduledMeals.some(s => s.date === today);
+
   return (
     <div>
+      {/* ── FIRST-USE GUIDE — shown before slots when inventory is empty ── */}
+      {!hasInventory && !hasTodayScheduled && (
+        <div className="mb-6 px-4 py-5 bg-brand-surface rounded-xl border border-brand-muted/10">
+          <p className="text-sm font-semibold text-brand-muted mb-3">How it works</p>
+          <div className="space-y-3">
+            {[
+              { step: '1', label: 'Plan', desc: 'Pick recipes and set how many meals you want to prep this week.', tab: 'plan' as const },
+              { step: '2', label: 'Prep', desc: 'Check off your shopping list, cook, and log the session.', tab: 'prep' as const },
+              { step: '3', label: 'Schedule', desc: 'Assign your prepped meals to days — then mark them eaten as you go.', tab: null },
+            ].map(({ step, label, desc, tab }) => (
+              <div key={step} className="flex gap-3 items-start">
+                <span className="w-5 h-5 rounded-full bg-brand-accent/20 text-brand-accent text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">{step}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-brand-muted leading-tight">{label}</p>
+                  <p className="text-xs text-brand-muted/45 mt-0.5 leading-relaxed">{desc}</p>
+                  {tab && (
+                    <button onClick={() => onNavigate(tab)} className="text-xs text-brand-accent font-medium mt-1 hover:text-brand-accent/80 transition-colors">
+                      Go to {label} →
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── TODAY ──────────────────────────────────────────── */}
       <div className="mb-6">
         <SectionLabel label="Today's Schedule" right={formatDayFull(today)} />
@@ -420,34 +472,6 @@ function DailyView({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
           })}
         </div>
       </div>
-
-      {/* ── FIRST-USE GUIDE (only shown when inventory is empty and nothing scheduled today) ── */}
-      {preparedMeals.filter(m => m.servingsRemaining > 0).length === 0 &&
-       !scheduledMeals.some(s => s.date === today) && (
-        <div className="mb-6 px-4 py-5 bg-brand-surface rounded-xl border border-brand-muted/10">
-          <p className="text-sm font-semibold text-brand-muted mb-3">How it works</p>
-          <div className="space-y-3">
-            {[
-              { step: '1', label: 'Plan', desc: 'Pick recipes and set how many meals you want to prep this week.', tab: 'plan' as const },
-              { step: '2', label: 'Prep', desc: 'Check off your shopping list, cook, and log the session.', tab: 'prep' as const },
-              { step: '3', label: 'Schedule', desc: 'Assign your prepped meals to days — then mark them eaten as you go.', tab: null },
-            ].map(({ step, label, desc, tab }) => (
-              <div key={step} className="flex gap-3 items-start">
-                <span className="w-5 h-5 rounded-full bg-brand-accent/20 text-brand-accent text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">{step}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-brand-muted leading-tight">{label}</p>
-                  <p className="text-xs text-brand-muted/45 mt-0.5 leading-relaxed">{desc}</p>
-                  {tab && (
-                    <button onClick={() => onNavigate(tab)} className="text-xs text-brand-accent font-medium mt-1 hover:text-brand-accent/80 transition-colors">
-                      Go to {label} →
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ── TODAY'S NUTRITION ───────────────────────────────── */}
       <TodayMacros />

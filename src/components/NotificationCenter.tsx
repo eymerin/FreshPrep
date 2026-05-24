@@ -90,7 +90,8 @@ export default function NotificationCenter({ onClose, onNavigate }: {
                   key={n.id}
                   onClick={() => {
                     markRead(n.id);
-                    if (n.type === 'expiry') { handleClose(); onNavigate('meals'); }
+                    if (n.type === 'expiry')    { handleClose(); onNavigate('meals'); }
+                    if (n.type === 'inventory') { handleClose(); onNavigate('plan'); }
                   }}
                   className={`w-full text-left px-5 py-4 hover:bg-brand-raised/30 transition-colors ${n.read ? 'opacity-45' : ''}`}
                 >
@@ -101,7 +102,11 @@ export default function NotificationCenter({ onClose, onNavigate }: {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-brand-muted leading-snug">{n.title}</p>
                       <p className="text-xs text-brand-muted/60 mt-1 leading-relaxed">{n.body}</p>
-                      <p className="text-[11px] text-brand-muted/35 mt-1.5">{timeAgo(n.timestamp)}</p>
+                      <p className="text-[11px] text-brand-muted/35 mt-1.5">
+                        {timeAgo(n.timestamp)}
+                        {n.type === 'expiry'    && <span className="ml-2 text-brand-accent/60">→ Ready</span>}
+                        {n.type === 'inventory' && <span className="ml-2 text-brand-accent/60">→ Plan</span>}
+                      </p>
                     </div>
                     {!n.read && (
                       <span className="w-2 h-2 rounded-full bg-brand-accent shrink-0 mt-1.5" />

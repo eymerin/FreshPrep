@@ -377,12 +377,14 @@ function ShoppingTab() {
   }
 
   const totalItems = displaySections.reduce((n, s) => n + s.items.filter(i => i.kind !== 'header').length, 0);
-  const allChecked = totalItems > 0 && displaySections.every((section) =>
-    section.items.filter(i => i.kind !== 'header').every((item) => {
+  const checkedItems = displaySections.reduce((n, s) =>
+    n + s.items.filter(i => i.kind !== 'header').filter((item) => {
       if (item.kind === 'single') return grabbed.has(item.key);
       return !!(chosen as Record<string, string>)[(item as { groupKey: string }).groupKey];
-    })
-  );
+    }).length, 0);
+  const allChecked = totalItems > 0 && checkedItems === totalItems;
+  const uncheckedCount = totalItems - checkedItems;
+  const canSend = planEntries.length > 0;
 
   function handleSendToLogPrep() {
     const preps = planEntries.flatMap((entry) => {
@@ -588,15 +590,17 @@ function ShoppingTab() {
       >
         <div className="max-w-4xl mx-auto pointer-events-auto">
           <button
-            disabled={!allChecked}
+            disabled={!canSend}
             onClick={handleSendToLogPrep}
             className={`w-full py-3 rounded-xl text-sm font-semibold shadow-lg transition-all ${
-              allChecked
+              canSend
                 ? 'bg-brand-accent text-white shadow-brand-accent/20'
                 : 'bg-brand-surface/80 text-brand-muted/25 border border-brand-muted/10 cursor-not-allowed'
             }`}
           >
-            Send to Prep Queue
+            {allChecked || totalItems === 0
+              ? 'Send to Prep Queue'
+              : `Send to Prep Queue · ${uncheckedCount} item${uncheckedCount !== 1 ? 's' : ''} unchecked`}
           </button>
         </div>
       </div>

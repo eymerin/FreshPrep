@@ -145,6 +145,9 @@ function MealCard({
   setConfirmRemoveId: (id: string | null) => void;
 }) {
   const unassigned = meal.servingsRemaining - assignedCount;
+  const getFreshnessStatus = useAppStore((s) => s.getFreshnessStatus);
+  const freshnessStatus = getFreshnessStatus(meal);
+  const isExpiringSoon = freshnessStatus === 'expiring' || freshnessStatus === 'expired';
 
   const isFridge = meal.storage === 'refrigerated';
   const storageChipDot = isFridge ? 'bg-brand-accent' : 'bg-brand-slate';
@@ -280,7 +283,12 @@ function MealCard({
               : 'bg-transparent text-brand-muted/30 cursor-not-allowed'
           }`}
         >
-          {unassigned > 0 ? 'Schedule' : 'Fully scheduled'}
+          {unassigned > 0 ? 'Schedule' : (
+            <span className="flex items-center justify-center gap-1.5">
+              Fully scheduled
+              {isExpiringSoon && <span className="text-amber-400 text-xs font-bold">· eat soon</span>}
+            </span>
+          )}
         </button>
         {confirmRemoveId === meal.id ? (
           <div className="flex items-center gap-1.5">
