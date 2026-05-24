@@ -118,8 +118,6 @@ function MealCard({
   const expDate     = getExpirationDate(meal);
   const shelfLife   = meal.storage === 'refrigerated' ? 4 : 90;
   const freshPct    = Math.max(0, Math.min(100, (days / shelfLife) * 100));
-  const isExpiringSoon = status === 'expiring' || status === 'expired';
-
   const isFridge    = meal.storage === 'refrigerated';
   const storageLabel = isFridge ? 'Fridge' : 'Frozen';
 
