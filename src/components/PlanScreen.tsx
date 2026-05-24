@@ -22,7 +22,7 @@ function getEntrySummary(entry: PlanEntry, recipe: Recipe): string {
     const selected = entry.selectedVariantIds;
     if (recipe.variants.length === 0 || selected.length === 0) return '';
     const names = recipe.variants.filter((v) => selected.includes(v.id)).map((v) => v.name);
-    return selected.length === 1 ? names[0] : names.join(', ') + ' (flexible)';
+    return names[0] ?? '';
   }
 }
 
@@ -154,36 +154,29 @@ function EntryCard({ entry, recipe, entryNumber }: { entry: PlanEntry; recipe: R
               })}
             </>
           ) : recipe.variants.length > 0 ? (
-            <div className="space-y-2">
-              {recipe.variants.map((variant) => {
+            <div>
+              <p className="text-[11px] text-brand-muted/40 uppercase tracking-wide mb-2">Choose a variant</p>
+              <div className="flex flex-wrap gap-2">
+                {recipe.variants.map((variant) => {
                   const isSelected = entry.selectedVariantIds.includes(variant.id);
                   return (
-                    <label
+                    <button
                       key={variant.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      onClick={() => toggleVariant(entry.id, variant.id)}
+                      className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors text-left ${
                         isSelected
-                          ? 'border-brand-accent bg-brand-accent/10'
-                          : 'border-brand-muted/15 hover:border-brand-accent/40 hover:bg-brand-muted/5'
+                          ? 'border-brand-accent bg-brand-accent text-white'
+                          : 'border-brand-muted/20 bg-brand-bg text-brand-muted/70 hover:border-brand-accent/50 hover:text-brand-muted'
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleVariant(entry.id, variant.id)}
-                        className="accent-brand-accent w-4 h-4"
-                      />
-                      <div>
-                        <p className="text-sm text-brand-muted/80">{variant.name}</p>
-                        {variant.additionalIngredients.length > 0 && (
-                          <p className="text-xs text-brand-muted/40 mt-0.5">
-                            + {variant.additionalIngredients.slice(0, 3).map((i) => i.name).join(', ')}
-                            {variant.additionalIngredients.length > 3 ? '…' : ''}
-                          </p>
-                        )}
-                      </div>
-                    </label>
+                      {variant.name}
+                    </button>
                   );
                 })}
+              </div>
+              {entry.selectedVariantIds.length === 0 && (
+                <p className="text-xs text-brand-muted/35 mt-2">Pick one to include its ingredients in the shopping list.</p>
+              )}
             </div>
           ) : null}
         </div>

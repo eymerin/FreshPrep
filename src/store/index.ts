@@ -453,10 +453,10 @@ export const useAppStore = create<AppState>()(
     set((s) => ({
       planEntries: s.planEntries.map((e) => {
         if (e.id !== entryId) return e;
-        const ids = e.selectedVariantIds;
+        // Single-select: clicking the selected variant deselects it; clicking another replaces it
         return {
           ...e,
-          selectedVariantIds: ids.includes(variantId) ? ids.filter((id) => id !== variantId) : [...ids, variantId],
+          selectedVariantIds: e.selectedVariantIds.includes(variantId) ? [] : [variantId],
         };
       }),
     }));
@@ -544,33 +544,14 @@ export const useAppStore = create<AppState>()(
         });
       } else {
         if (entry.selectedVariantIds.length === 0 && recipe.variants.length > 0) continue;
-        const selected = recipe.variants.filter((v) => entry.selectedVariantIds.includes(v.id));
-        if (selected.length === 1) {
-          queued.push({
-            id: uid(),
-            recipeId: entry.recipeId,
-            recipeName: recipe.name,
-            servings: entry.servings,
-            variantId: selected[0].id,
-            variantName: selected[0].name,
-          });
-        } else if (selected.length > 1) {
-          queued.push({
-            id: uid(),
-            recipeId: entry.recipeId,
-            recipeName: recipe.name,
-            servings: entry.servings,
-            pendingVariants: selected.map((v) => ({ id: v.id, name: v.name })),
-          });
-        } else {
-          // No variants on recipe (e.g. Breakfast Burrito)
-          queued.push({
-            id: uid(),
-            recipeId: entry.recipeId,
-            recipeName: recipe.name,
-            servings: entry.servings,
-          });
-        }
+        const variant = recipe.variants.find((v) => entry.selectedVariantIds[0] === v.id);
+        queued.push({
+          id: uid(),
+          recipeId: entry.recipeId,
+          recipeName: recipe.name,
+          servings: entry.servings,
+          ...(variant ? { variantId: variant.id, variantName: variant.name } : {}),
+        });
       }
     }
 

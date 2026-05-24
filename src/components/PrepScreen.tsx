@@ -13,7 +13,6 @@ function PendingCard({ pending }: { pending: PendingPrep }) {
 
   const recipe = recipes.find((r) => r.id === pending.recipeId);
   const [storage, setStorage] = useState<StorageType>('refrigerated');
-  const [resolvedVariantId, setResolvedVariantId] = useState(pending.variantId || '');
   const [resolvedSlots, setResolvedSlots] = useState<Record<string, string>>(() => {
     // Pre-fill single picks
     const init: Record<string, string> = {};
@@ -25,12 +24,11 @@ function PendingCard({ pending }: { pending: PendingPrep }) {
     return init;
   });
 
-  const needsVariantResolution = (pending.pendingVariants?.length ?? 0) > 1;
   const needsSlotResolution = recipe?.type === 'composed' && recipe.slots?.some(
     (s) => (pending.slotPicks?.[s.id] || []).length > 1
   );
   const allSlotsResolved = !recipe?.slots || recipe.slots.every((s) => resolvedSlots[s.id]);
-  const canComplete = (!needsVariantResolution || !!resolvedVariantId) && allSlotsResolved;
+  const canComplete = allSlotsResolved;
 
   // Build display label
   let displayName = '';
@@ -38,7 +36,7 @@ function PendingCard({ pending }: { pending: PendingPrep }) {
     const parts = (recipe.slots || []).map((s) => resolvedSlots[s.id] || (pending.slotPicks?.[s.id]?.[0]));
     displayName = parts.filter(Boolean).join(' · ');
   } else {
-    displayName = pending.variantName || (pending.pendingVariants?.[0]?.name ?? recipe?.name ?? '');
+    displayName = pending.variantName ?? '';
   }
 
   return (
@@ -54,29 +52,7 @@ function PendingCard({ pending }: { pending: PendingPrep }) {
         <button onClick={() => removePendingPrep(pending.id)} className="text-brand-muted/25 hover:text-red-400 transition-colors text-xl leading-none">×</button>
       </div>
 
-      {/* Resolve flexible variant */}
-      {needsVariantResolution && (
-        <div className="px-4 pb-3">
-          <p className="text-xs text-brand-muted/50 mb-2">Which variant did you make?</p>
-          <div className="flex flex-wrap gap-2">
-            {pending.pendingVariants!.map((v) => (
-              <button
-                key={v.id}
-                onClick={() => setResolvedVariantId(v.id)}
-                className={`px-3 py-1.5 rounded-lg border text-xs transition-colors ${
-                  resolvedVariantId === v.id
-                    ? 'bg-brand-accent text-white border-brand-accent'
-                    : 'bg-brand-bg text-brand-muted/60 border-brand-muted/20 hover:border-brand-accent/50'
-                }`}
-              >
-                {v.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Resolve flexible slots */}
+      {/* Resolve flexible slots (composed recipes only) */}
       {needsSlotResolution && recipe?.slots?.map((slot) => {
         const picks = pending.slotPicks?.[slot.id] || [];
         if (picks.length <= 1) return null;
@@ -121,7 +97,7 @@ function PendingCard({ pending }: { pending: PendingPrep }) {
         </div>
         <button
           disabled={!canComplete}
-          onClick={() => markPrepComplete(pending.id, storage, resolvedSlots, resolvedVariantId || undefined)}
+          onClick={() => markPrepComplete(pending.id, storage, resolvedSlots, pending.variantId || undefined)}
           className="w-full py-2 rounded-lg bg-brand-accent text-white text-sm font-medium hover:bg-brand-accent/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           ✓ Mark as Prepped
