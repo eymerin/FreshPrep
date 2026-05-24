@@ -10,7 +10,6 @@ import ScheduleScreen from './components/ScheduleScreen';
 import RecipesScreen from './components/RecipesScreen';
 import ProfileScreen from './components/ProfileScreen';
 import OnboardingScreen from './components/OnboardingScreen';
-import CelebrationOverlay from './components/CelebrationOverlay';
 
 type Tab = 'plan' | 'prep' | 'schedule' | 'meals' | 'recipes' | 'profile';
 
@@ -21,27 +20,21 @@ export default function App() {
   useNotificationCheck();
 
   if (!onboardingComplete) {
-    return (
-      <>
-        <OnboardingScreen />
-        <CelebrationOverlay />
-      </>
-    );
+    return <OnboardingScreen />;
   }
 
+  const navigate = (tab: string) => setActiveTab(tab as Tab);
+
   return (
-    <>
-      <Layout activeTab={activeTab} onTabChange={setActiveTab}>
-        {activeTab === 'plan'     && <PlanScreen onNavigate={(tab) => setActiveTab(tab as Tab)} />}
-        {activeTab === 'prep'     && <PrepScreen />}
-        {activeTab === 'schedule' && <ScheduleScreen onNavigate={(tab) => setActiveTab(tab as Tab)} />}
-        {activeTab === 'meals'    && <MealsScreen onNavigate={(tab) => setActiveTab(tab as Tab)} />}
-        {activeTab === 'recipes'  && <RecipesScreen />}
-        {activeTab === 'profile'  && (
-          <ProfileScreen onClose={() => setActiveTab('schedule')} pageMode />
-        )}
-      </Layout>
-      <CelebrationOverlay />
-    </>
+    <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+      {activeTab === 'plan'     && <PlanScreen onNavigate={navigate} />}
+      {activeTab === 'prep'     && <PrepScreen onNavigate={navigate} />}
+      {activeTab === 'schedule' && <ScheduleScreen onNavigate={navigate} />}
+      {activeTab === 'meals'    && <MealsScreen onNavigate={navigate} />}
+      {activeTab === 'recipes'  && <RecipesScreen />}
+      {activeTab === 'profile'  && (
+        <ProfileScreen onClose={() => setActiveTab('schedule')} pageMode />
+      )}
+    </Layout>
   );
 }

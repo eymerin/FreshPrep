@@ -1,15 +1,23 @@
 import { useState } from 'react';
 import { useAppStore } from '../store';
 import { MealTime, PreparedMeal, NutrientInfo } from '../types';
-import { addDays, computeWeekStreak, format, formatDisplay, getDayLabel, parseISO } from '../utils/dates';
+import { addDays, computeWeekStreak, format, formatDisplay, getDayLabel, getMondayOfWeek, parseISO } from '../utils/dates';
 
 type Tab = 'plan' | 'prep' | 'schedule' | 'meals' | 'recipes';
 
 const MEAL_TIMES: MealTime[] = ['breakfast', 'lunch', 'snack', 'dinner'];
 const MEAL_TIME_LABELS: Record<MealTime, string> = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', dinner: 'Dinner' };
 
+// Returns the Mon–Sun calendar week containing today (#16 — consistent week definition)
 function getWeekDates(): string[] {
-  return Array.from({ length: 7 }, (_, i) => format(addDays(new Date(), i)));
+  const monday = getMondayOfWeek(format(new Date()));
+  return Array.from({ length: 7 }, (_, i) => format(addDays(parseISO(monday), i)));
+}
+
+// For desktop navigation: offset 0 = current week, +1 = next week, -1 = last week
+function getWeekDatesWithOffset(offset: number): string[] {
+  const monday = getMondayOfWeek(format(addDays(new Date(), offset * 7)));
+  return Array.from({ length: 7 }, (_, i) => format(addDays(parseISO(monday), i)));
 }
 
 function formatDayFull(dateStr: string): string {
@@ -695,13 +703,12 @@ function DesktopInventoryRail({ onNavigate }: { onNavigate: (tab: Tab) => void }
 }
 
 // ── Desktop weekly grid ───────────────────────────────────────
-function DesktopWeeklyGrid() {
+function DesktopWeeklyGrid({ weekDates }: { weekDates: string[] }) {
   const scheduledMeals    = useAppStore((s) => s.scheduledMeals);
   const preparedMeals     = useAppStore((s) => s.preparedMeals);
   const eatenScheduledIds = useAppStore((s) => s.eatenScheduledIds);
   const getFreshnessStatus = useAppStore((s) => s.getFreshnessStatus);
   const [assignTarget, setAssignTarget] = useState<{ date: string; mealTime: MealTime } | null>(null);
-  const weekDates = getWeekDates();
   const today = format(new Date());
 
   return (
@@ -874,14 +881,29 @@ function DesktopWeekStrip() {
   );
 }
 
-export default function ScheduleScreen({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
+export default function ScheduleScreen({ onNavigate }: { onNavigate: (tab: string) => void }) {
   const subTab = useAppStore((s) => s.calendarSubTab);
   const setSubTab = useAppStore((s) => s.setCalendarSubTab);
   const [desktopView, setDesktopView] = useState<'weekly' | 'daily'>('weekly');
+  const [weekOffset, setWeekOffset] = useState(0);
 
-  const weekDates = getWeekDates();
-  const monday = weekDates[0];
-  const sunday = weekDates[6];
+  const preparedMeals = useAppStore((s) => s.preparedMeals);
+  const userPrefs     = useAppStore((s) => s.userPrefs);
+
+  // Desktop week dates (navigable); mobile always uses current week
+  const desktopWeekDates = getWeekDatesWithOffset(weekOffset);
+  const monday = desktopWeekDates[0];
+  const sunday = desktopWeekDates[6];
+
+  // Inventory coverage summary (#24)
+  const available    = preparedMeals.filter(m => m.servingsRemaining > 0).length;
+  const mealsPerDay  = userPrefs ? userPrefs.mealsPerWeek / 7 : 1;
+  const coverageDays = available > 0 ? Math.round(available / mealsPerDay) : 0;
+  const covThrough   = coverageDays >= 7
+    ? 'Set for the week'
+    : coverageDays > 0
+    ? `Covered through ${addDays(new Date(), coverageDays - 1).toLocaleDateString('en-US', { weekday: 'long' })}`
+    : null;
 
   return (
     <div className="lg:grid lg:grid-cols-[1fr_312px] lg:gap-10 lg:items-start">
@@ -912,12 +934,35 @@ export default function ScheduleScreen({ onNavigate }: { onNavigate: (tab: Tab) 
         {/* ── Desktop calendar header ──────────────────────────── */}
         <div className="hidden lg:block mb-5">
           <p className="text-[11px] font-semibold text-brand-accent/80 uppercase tracking-widest mb-1">
-            WEEK OF {formatDisplay(monday)} – {formatDisplay(sunday)}
+            Schedule
           </p>
-          <div className="flex items-center justify-between gap-4">
-            <h1 className="text-xl font-semibold text-brand-muted">
-              {formatDisplay(monday)} – {formatDisplay(sunday)}
-            </h1>
+          <div className="flex items-center justify-between gap-4 mb-1.5">
+            {/* Week title + navigation (#22) */}
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold text-brand-muted">
+                {formatDisplay(monday)} – {formatDisplay(sunday)}
+              </h1>
+              <div className="flex items-center gap-1 ml-2">
+                <button
+                  onClick={() => setWeekOffset(w => w - 1)}
+                  className="w-7 h-7 rounded-md border border-brand-muted/15 text-brand-muted/50 hover:text-brand-muted hover:border-brand-muted/30 transition-colors flex items-center justify-center text-sm"
+                  aria-label="Previous week"
+                >‹</button>
+                {weekOffset !== 0 && (
+                  <button
+                    onClick={() => setWeekOffset(0)}
+                    className="px-2 py-0.5 rounded text-xs text-brand-accent border border-brand-accent/30 hover:bg-brand-accent/10 transition-colors"
+                  >
+                    Today
+                  </button>
+                )}
+                <button
+                  onClick={() => setWeekOffset(w => w + 1)}
+                  className="w-7 h-7 rounded-md border border-brand-muted/15 text-brand-muted/50 hover:text-brand-muted hover:border-brand-muted/30 transition-colors flex items-center justify-center text-sm"
+                  aria-label="Next week"
+                >›</button>
+              </div>
+            </div>
             {/* Daily/Weekly segmented toggle */}
             <div className="flex bg-brand-surface rounded-lg border border-brand-muted/15 p-0.5 shrink-0">
               <button
@@ -934,12 +979,19 @@ export default function ScheduleScreen({ onNavigate }: { onNavigate: (tab: Tab) 
               </button>
             </div>
           </div>
+          {/* Inventory coverage line (#24) */}
+          {available > 0 && (
+            <p className="text-xs text-brand-muted/50">
+              <span className="text-brand-accent font-medium">{available} meal{available !== 1 ? 's' : ''} ready</span>
+              {covThrough && <span> · {covThrough}</span>}
+            </p>
+          )}
         </div>
 
         {/* ── Desktop: weekly 7-column grid ───────────────────── */}
         {desktopView === 'weekly' && (
           <div className="hidden lg:block">
-            <DesktopWeeklyGrid />
+            <DesktopWeeklyGrid weekDates={desktopWeekDates} />
             <DesktopWeekStrip />
           </div>
         )}

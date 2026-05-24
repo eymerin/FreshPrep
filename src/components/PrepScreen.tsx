@@ -132,7 +132,7 @@ function PendingCard({ pending }: { pending: PendingPrep }) {
 }
 
 // ── Success card (shared between mobile and desktop) ──────────
-function SuccessCard({ onDismiss }: { onDismiss: () => void }) {
+function SuccessCard({ onDismiss, onNavigate }: { onDismiss: () => void; onNavigate: (tab: string) => void }) {
   const preparedMeals      = useAppStore((s) => s.preparedMeals);
   const prepSessionsLogged = useAppStore((s) => s.prepSessionsLogged);
   const mealEatenDates     = useAppStore((s) => s.mealEatenDates);
@@ -154,7 +154,7 @@ function SuccessCard({ onDismiss }: { onDismiss: () => void }) {
     : null;
 
   return (
-    <div className="mb-5 bg-brand-surface rounded-xl border border-brand-accent/25 p-4 cursor-pointer" onClick={onDismiss}>
+    <div className="mb-5 bg-brand-surface rounded-xl border border-brand-accent/25 p-4">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <p className="text-base font-semibold text-brand-muted leading-snug">
@@ -168,7 +168,7 @@ function SuccessCard({ onDismiss }: { onDismiss: () => void }) {
           <span className="text-brand-accent text-xs font-bold">✓</span>
         </div>
       </div>
-      <div className="flex gap-2 mb-2.5">
+      <div className="flex gap-2 mb-3">
         <div className="flex-1 bg-brand-bg rounded-lg px-3 py-2.5">
           <p className="text-[11px] text-brand-muted/40 mb-1">In inventory</p>
           <p className="text-sm font-semibold text-brand-muted leading-none">{available}</p>
@@ -184,9 +184,17 @@ function SuccessCard({ onDismiss }: { onDismiss: () => void }) {
           <p className="text-sm font-semibold text-brand-muted leading-none">#{prepSessionsLogged}</p>
         </div>
       </div>
-      {streak >= 2 && <p className="text-xs text-brand-accent/70">{streak}-week consistency streak.</p>}
-      {streak === 1 && <p className="text-xs text-brand-muted/40">First week active. Keep going.</p>}
-      {streak === 0 && prepSessionsLogged === 1 && <p className="text-xs text-brand-muted/40">Head to Calendar to schedule your meals.</p>}
+      {/* Primary CTA — schedule these meals */}
+      <button
+        onClick={() => onNavigate('schedule')}
+        className="w-full py-2.5 bg-brand-accent text-white rounded-lg text-sm font-semibold hover:bg-brand-accent/80 transition-colors mb-2"
+      >
+        Schedule these meals →
+      </button>
+      <button onClick={onDismiss} className="w-full py-1.5 text-xs text-brand-muted/40 hover:text-brand-muted transition-colors">
+        Dismiss
+      </button>
+      {streak >= 2 && <p className="text-xs text-brand-accent/70 mt-1 text-center">{streak}-week consistency streak.</p>}
     </div>
   );
 }
@@ -233,7 +241,7 @@ function JustPreppedRail() {
 }
 
 // ── Manual log form ───────────────────────────────────────────
-export default function PrepScreen() {
+export default function PrepScreen({ onNavigate }: { onNavigate: (tab: string) => void }) {
   const recipes            = useAppStore((s) => s.recipes);
   const logPrepEvent       = useAppStore((s) => s.logPrepEvent);
   const pendingPreps       = useAppStore((s) => s.pendingPreps);
@@ -387,7 +395,7 @@ export default function PrepScreen() {
             </p>
           </div>
         )}
-        {success && <SuccessCard onDismiss={() => setSuccess(false)} />}
+        {success && <SuccessCard onDismiss={() => setSuccess(false)} onNavigate={onNavigate} />}
 
         {/* Manual log — collapsible drawer on mobile when queue exists */}
         {pendingPreps.length > 0 ? (
@@ -469,7 +477,7 @@ export default function PrepScreen() {
             </button>
             {logDrawerOpen && (
               <div className="mt-3">
-                {success && <SuccessCard onDismiss={() => setSuccess(false)} />}
+                {success && <SuccessCard onDismiss={() => setSuccess(false)} onNavigate={onNavigate} />}
                 {manualForm}
               </div>
             )}
@@ -478,7 +486,7 @@ export default function PrepScreen() {
 
         {/* Right col: success card + recent sessions */}
         <div className="hidden lg:block sticky top-6">
-          {success && <SuccessCard onDismiss={() => setSuccess(false)} />}
+          {success && <SuccessCard onDismiss={() => setSuccess(false)} onNavigate={onNavigate} />}
           <JustPreppedRail />
         </div>
       </div>

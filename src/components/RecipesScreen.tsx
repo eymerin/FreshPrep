@@ -333,9 +333,9 @@ function NutritionModal({
   const ingredientLibrary  = useAppStore((s) => s.ingredientLibrary);
   const libraryMatch       = ingredientLibrary[ingredientName.toLowerCase().trim()];
 
-  // Default to manual tab if the existing nutrition was entered manually
+  // Default to manual — it's faster for most users (30 sec vs. USDA search hunting)
   const [nutrMode, setNutrMode] = useState<'usda' | 'manual'>(
-    currentNutrition?.source === 'manual' || currentNutrition?.fdcId === 0 ? 'manual' : 'usda'
+    currentNutrition?.source !== 'manual' && currentNutrition?.fdcId && currentNutrition.fdcId > 0 ? 'usda' : 'manual'
   );
   const [query, setQuery]               = useState(ingredientName);
   const [results, setResults]           = useState<UsdaFood[]>([]);
@@ -475,13 +475,13 @@ function NutritionModal({
               <button onClick={onClose} className="text-brand-muted/40 hover:text-brand-muted text-xl leading-none">×</button>
             </div>
           </div>
-          {/* Source tabs — only shown on the search step */}
+          {/* Source tabs — manual first (#15) */}
           {!selectedFood && (
             <div className="flex gap-1 mt-3 bg-brand-bg rounded-lg p-0.5">
-              {(['usda', 'manual'] as const).map(mode => (
+              {(['manual', 'usda'] as const).map(mode => (
                 <button key={mode} onClick={() => setNutrMode(mode)}
                   className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${nutrMode === mode ? 'bg-brand-surface text-brand-muted shadow-sm' : 'text-brand-muted/40 hover:text-brand-muted/60'}`}>
-                  {mode === 'usda' ? 'Search USDA' : 'Enter manually'}
+                  {mode === 'manual' ? 'Enter manually' : 'Search USDA database'}
                 </button>
               ))}
             </div>
@@ -1095,10 +1095,10 @@ function AddIngredientForm({ onAdd }: {
           <div className="flex items-center justify-between">
             <p className="text-[11px] text-brand-muted/40 uppercase tracking-wide">Nutrition</p>
             <div className="flex gap-0.5 bg-brand-bg rounded-lg p-0.5">
-              {(['usda', 'manual'] as const).map(mode => (
+              {(['manual', 'usda'] as const).map(mode => (
                 <button key={mode} onClick={() => setNutrSource(mode)}
                   className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${nutrSource === mode ? 'bg-brand-surface text-brand-muted shadow-sm' : 'text-brand-muted/40 hover:text-brand-muted/60'}`}>
-                  {mode === 'usda' ? 'USDA' : 'Manual'}
+                  {mode === 'manual' ? 'Manual' : 'USDA'}
                 </button>
               ))}
             </div>

@@ -2,9 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Recipe, RecipeVariant, Ingredient, ComponentSlot, SlotOption, PreparedMeal, PrepEvent, ScheduledMeal, MealTime, PlanEntry, PendingPrep, StorageType, UserPrefs, IngredientNutrition, FoodRecord, NotificationSettings, AppNotification, UserProfile, NutritionGoals, PendingCelebration } from '../types';
 import { SEED_RECIPES, SHELF_LIFE_DAYS } from '../data/seed';
-import { addDays, format, getMondayOfWeek, parseISO, differenceInDays, computePrepWeekStreak } from '../utils/dates';
+import { addDays, format, parseISO, differenceInDays } from '../utils/dates';
 import { computeRecipeNutrientsPerServing } from '../utils/nutrition';
-import { ALL_MESSAGES, SET_CONFIG, STREAK_MILESTONES, MessageSet } from '../data/messages';
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -182,64 +181,6 @@ interface AppState {
   markInsightsTipSeen: () => void;
 }
 
-function unlockNextForSet(
-  set: (partial: any) => void,
-  get: () => any,
-  setName: MessageSet,
-) {
-  const s = get() as { unlockedMessageIds: string[]; pendingCelebrations: PendingCelebration[] };
-  const msgs = ALL_MESSAGES.filter(m => m.set === setName);
-  const next = msgs.find(m => !s.unlockedMessageIds.includes(m.id));
-  if (!next) return;
-  const cardNumber = msgs.findIndex(m => m.id === next.id) + 1;
-  const newUnlocked = [...s.unlockedMessageIds, next.id];
-  const cfg = SET_CONFIG[setName];
-  set({
-    unlockedMessageIds: newUnlocked,
-    pendingCelebrations: [
-      ...s.pendingCelebrations,
-      {
-        id: next.id,
-        set: next.set,
-        setLabel: cfg.label,
-        emoji: cfg.emoji,
-        text: next.text,
-        cardNumber,
-        totalUnlocked: newUnlocked.length,
-      } as PendingCelebration,
-    ],
-  });
-}
-
-function unlockSpecific(
-  set: (partial: any) => void,
-  get: () => any,
-  messageId: string,
-) {
-  const s = get() as { unlockedMessageIds: string[]; pendingCelebrations: PendingCelebration[] };
-  if (s.unlockedMessageIds.includes(messageId)) return;
-  const msg = ALL_MESSAGES.find(m => m.id === messageId);
-  if (!msg) return;
-  const setMsgs = ALL_MESSAGES.filter(m => m.set === msg.set);
-  const cardNumber = setMsgs.findIndex(m => m.id === messageId) + 1;
-  const newUnlocked = [...s.unlockedMessageIds, messageId];
-  const cfg = SET_CONFIG[msg.set];
-  set({
-    unlockedMessageIds: newUnlocked,
-    pendingCelebrations: [
-      ...s.pendingCelebrations,
-      {
-        id: msg.id,
-        set: msg.set,
-        setLabel: cfg.label,
-        emoji: cfg.emoji,
-        text: msg.text,
-        cardNumber,
-        totalUnlocked: newUnlocked.length,
-      } as PendingCelebration,
-    ],
-  });
-}
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -319,10 +260,6 @@ export const useAppStore = create<AppState>()(
         ingredientLibrary: { ...s.ingredientLibrary, [normName(ingName)]: record },
       };
     });
-    if (nutrition && nutrition.fdcId > 0) {
-      const s = get();
-      if (!s.unlockedMessageIds.includes('fs-4')) unlockSpecific(set, get, 'fs-4');
-    }
   },
 
   setVariantIngredientNutrition: (recipeId, variantId, ingId, nutrition) => {
@@ -566,28 +503,6 @@ export const useAppStore = create<AppState>()(
       mealsEatenAllTime: s.mealsEatenAllTime + 1,
       mealEatenDates: [...s.mealEatenDates, format(new Date())],
     }));
-    // Check milestone triggers with updated state
-    const s = get();
-    const today = format(new Date());
-    const weekMonday = getMondayOfWeek(today);
-    const weekMeals = s.scheduledMeals.filter(m => getMondayOfWeek(m.date) === weekMonday);
-    const weekDone = weekMeals.length > 0 && weekMeals.every(m => s.eatenScheduledIds.includes(m.id));
-    if (weekDone) {
-      unlockNextForSet(set, get, 'week-champion');
-      return;
-    }
-    const sm = s.scheduledMeals.find(m => m.id === id);
-    if (sm) {
-      const dayMeals = s.scheduledMeals.filter(m => m.date === sm.date);
-      const dayDone = dayMeals.length > 0 && dayMeals.every(m => s.eatenScheduledIds.includes(m.id));
-      if (dayDone) {
-        if (!s.unlockedMessageIds.includes('fs-2')) {
-          unlockSpecific(set, get, 'fs-2');
-        } else {
-          unlockNextForSet(set, get, 'clean-plate');
-        }
-      }
-    }
   },
 
   recipesSelectedId: null,
@@ -661,10 +576,6 @@ export const useAppStore = create<AppState>()(
 
     if (queued.length === 0) return;
     set((s) => ({ pendingPreps: [...s.pendingPreps, ...queued] }));
-    // fs-3: first time a plan is queued for prep
-    if (!get().unlockedMessageIds.includes('fs-3')) {
-      unlockSpecific(set, get, 'fs-3');
-    }
   },
 
   markPrepComplete: (pendingId, storage, finalSlotPicks, finalVariantId) => {
@@ -762,22 +673,6 @@ export const useAppStore = create<AppState>()(
       prepEventDates: s.prepEventDates.includes(today) ? s.prepEventDates : [...s.prepEventDates, today],
     }));
 
-    // Milestone checks
-    const s = get();
-    if (!s.unlockedMessageIds.includes('fs-1')) {
-      unlockSpecific(set, get, 'fs-1');
-      return;
-    }
-    // Check streak milestones (priority over regular prep-day)
-    const streak = computePrepWeekStreak(s.prepEventDates);
-    const streakMsgIds = ALL_MESSAGES.filter(m => m.set === 'streak').map(m => m.id);
-    const earnedStreakCount = s.unlockedMessageIds.filter(id => streakMsgIds.includes(id)).length;
-    const nextMilestone = STREAK_MILESTONES[earnedStreakCount];
-    if (nextMilestone !== undefined && streak >= nextMilestone) {
-      unlockNextForSet(set, get, 'streak');
-      return;
-    }
-    unlockNextForSet(set, get, 'prep-day');
   },
 
   consumeServing: (mealId) => {
@@ -848,13 +743,7 @@ export const useAppStore = create<AppState>()(
   updateUserProfile: (p) => set((s) => ({ userProfile: { ...s.userProfile, ...p } })),
   nutritionGoals: { calories: null, protein: null, carbs: null, fat: null },
   updateNutritionGoals: (g) => {
-    const wasEmpty = Object.values(get().nutritionGoals).every(v => v === null);
     set((s) => ({ nutritionGoals: { ...s.nutritionGoals, ...g } }));
-    const hasGoal = Object.values(get().nutritionGoals).some(v => v !== null);
-    if (wasEmpty && hasGoal) {
-      const s = get();
-      if (!s.unlockedMessageIds.includes('fs-5')) unlockSpecific(set, get, 'fs-5');
-    }
   },
 
   // ── Onboarding ─────────────────────────────────────────────
