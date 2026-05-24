@@ -602,218 +602,260 @@ function WeeklyView() {
   );
 }
 
-// ── Desktop inventory + alerts rail ──────────────────────────
-function DesktopInventoryRail({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
-  const preparedMeals     = useAppStore((s) => s.preparedMeals);
-  const appNotifications  = useAppStore((s) => s.appNotifications);
-  const getDaysRemaining  = useAppStore((s) => s.getDaysRemaining);
+// ── Desktop inventory sidebar ─────────────────────────────────
+function InventorySidebar({
+  target,
+  onClose,
+  onNavigate,
+  onAssigned,
+}: {
+  target: { date: string; mealTime: MealTime } | null;
+  onClose: () => void;
+  onNavigate: (tab: string) => void;
+  onAssigned: () => void;
+}) {
+  const preparedMeals    = useAppStore((s) => s.preparedMeals);
+  const scheduledMeals   = useAppStore((s) => s.scheduledMeals);
+  const scheduleMeal     = useAppStore((s) => s.scheduleMeal);
+  const getDaysRemaining = useAppStore((s) => s.getDaysRemaining);
+  const getFreshnessStatus = useAppStore((s) => s.getFreshnessStatus);
 
   const available = preparedMeals
-    .filter((m) => m.servingsRemaining > 0)
-    .sort((a, b) => getDaysRemaining(a) - getDaysRemaining(b))
-    .slice(0, 4);
+    .filter((m) => {
+      if (m.servingsRemaining <= 0) return false;
+      const assigned = scheduledMeals.filter(s => s.preparedMealId === m.id).length;
+      return m.servingsRemaining - assigned > 0;
+    })
+    .sort((a, b) => getDaysRemaining(a) - getDaysRemaining(b));
 
-  const unread = appNotifications.filter((n) => !n.read);
+  function assignMeal(mealId: string) {
+    if (!target) return;
+    scheduleMeal(target.date, target.mealTime, mealId);
+    onAssigned(); // clears target in parent; sidebar stays open
+  }
 
   return (
-    <div className="hidden lg:flex flex-col gap-5 sticky top-6">
-      {/* Inventory rail */}
-      <div className="bg-brand-surface rounded-xl border border-brand-muted/15 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-brand-muted/10">
+    <div className="flex flex-col h-full bg-brand-surface border-l border-brand-muted/10 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-brand-muted/10 shrink-0">
+        <div>
           <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide">Inventory</p>
-          <button
-            onClick={() => onNavigate('prep')}
-            className="text-xs text-brand-accent font-medium hover:text-brand-accent/80 transition-colors"
-          >
-            + Log prep
-          </button>
+          {target && (
+            <p className="text-[11px] text-brand-accent mt-0.5">
+              Assigning → {getDayLabel(target.date)} {MEAL_TIME_LABELS[target.mealTime]}
+            </p>
+          )}
+          {!target && (
+            <p className="text-[11px] text-brand-muted/35 mt-0.5">Tap a slot to assign</p>
+          )}
         </div>
-
-        {available.length === 0 ? (
-          <div className="px-4 py-6 text-center">
-            <p className="text-sm text-brand-muted/40">No meals in inventory</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-brand-muted/10">
-            {available.map((meal) => {
-              const days = getDaysRemaining(meal);
-              const isExpiring = days <= 2;
-              const barColor = isExpiring ? 'bg-amber-400' : 'bg-emerald-500';
-              const shelfLife = meal.storage === 'refrigerated' ? 4 : 90;
-              const pct = Math.max(0, Math.min(100, (days / shelfLife) * 100));
-              return (
-                <div key={meal.id} className="px-4 py-3">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-sm font-medium text-brand-muted leading-tight truncate flex-1">{meal.recipeName}</p>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
-                      meal.storage === 'refrigerated'
-                        ? 'bg-brand-slate/20 text-brand-slate'
-                        : 'bg-brand-raised text-brand-muted/50'
-                    }`}>
-                      {meal.storage === 'refrigerated' ? 'Fridge' : 'Frozen'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-xs text-brand-muted/50">{meal.servingsRemaining} serving{meal.servingsRemaining !== 1 ? 's' : ''}</p>
-                    <p className={`text-[11px] font-medium ${isExpiring ? 'text-amber-400' : 'text-brand-muted/40'}`}>
-                      {days > 0 ? `${days}d left` : 'Expired'}
-                    </p>
-                  </div>
-                  <div className="h-1 bg-brand-bg rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="px-4 py-2.5 border-t border-brand-muted/10">
-          <button
-            onClick={() => onNavigate('meals')}
-            className="text-xs text-brand-accent font-medium hover:text-brand-accent/80 transition-colors"
-          >
-            View all in Ready
-          </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => onNavigate('prep')} className="text-xs text-brand-accent font-medium hover:text-brand-accent/80 transition-colors">+ Log prep</button>
+          <button onClick={onClose} className="text-brand-muted/40 hover:text-brand-muted transition-colors text-lg leading-none ml-1">×</button>
         </div>
       </div>
 
-      {/* Alerts rail */}
-      {unread.length > 0 && (
-        <div className="bg-brand-surface rounded-xl border border-brand-muted/15 overflow-hidden">
-          <div className="px-4 py-3 border-b border-brand-muted/10">
-            <p className="text-xs font-semibold text-brand-muted/60 uppercase tracking-wide">Alerts</p>
+      {/* Meal list */}
+      <div className="flex-1 overflow-y-auto divide-y divide-brand-muted/8">
+        {available.length === 0 && (
+          <div className="px-4 py-8 text-center">
+            <p className="text-sm text-brand-muted/40">No meals in inventory</p>
+            <button onClick={() => onNavigate('prep')} className="mt-2 text-xs text-brand-accent font-medium">Log a prep session →</button>
           </div>
-          <div className="divide-y divide-brand-muted/10">
-            {unread.map((n) => (
-              <div key={n.id} className="px-4 py-3 flex items-start justify-between gap-3">
-                <p className={`text-sm leading-snug flex-1 ${n.type === 'expiry' ? 'text-amber-400' : 'text-brand-muted/70'}`}>
-                  {n.title}
-                </p>
-                <button
-                  onClick={() => onNavigate('plan')}
-                  className="text-xs text-brand-accent font-medium shrink-0 hover:text-brand-accent/80 transition-colors"
-                >
-                  Plan
-                </button>
+        )}
+        {available.map((meal) => {
+          const days    = getDaysRemaining(meal);
+          const status  = getFreshnessStatus(meal);
+          const isExpiring = status === 'expiring' || status === 'expired';
+          const barColor   = status === 'fresh' ? 'bg-emerald-500' : status === 'expiring' ? 'bg-amber-400' : 'bg-red-500';
+          const shelfLife  = meal.storage === 'refrigerated' ? 4 : 90;
+          const pct        = Math.max(0, Math.min(100, (days / shelfLife) * 100));
+          const n          = meal.nutrientsPerServing;
+          const canAssign  = !!target;
+
+          return (
+            <button
+              key={meal.id}
+              onClick={() => canAssign && assignMeal(meal.id)}
+              disabled={!canAssign}
+              className={`w-full text-left px-4 py-3 transition-colors ${
+                canAssign ? 'hover:bg-brand-accent/10 cursor-pointer' : 'cursor-default'
+              } ${canAssign && target ? 'hover:border-l-2 hover:border-brand-accent' : ''}`}
+            >
+              {/* Name + storage chip */}
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-brand-muted leading-tight">{meal.recipeName}</p>
+                  {meal.variantName && meal.variantName !== meal.recipeName && (
+                    <p className="text-[11px] text-brand-muted/50">{meal.variantName}</p>
+                  )}
+                </div>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
+                  meal.storage === 'refrigerated' ? 'bg-brand-accent/15 text-emerald-300/80' : 'bg-brand-slate/20 text-brand-slate'
+                }`}>
+                  {meal.storage === 'refrigerated' ? 'Fridge' : 'Frozen'}
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              {/* Servings + freshness */}
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[11px] text-brand-muted/50">{meal.servingsRemaining} serving{meal.servingsRemaining !== 1 ? 's' : ''}</p>
+                <p className={`text-[11px] font-medium ${isExpiring ? 'text-amber-400' : 'text-brand-muted/40'}`}>
+                  {days > 0 ? `${days}d left` : 'Expired'}
+                </p>
+              </div>
+              <div className="h-1 bg-brand-bg rounded-full overflow-hidden mb-2">
+                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+              </div>
+              {/* Macros */}
+              {n && (
+                <div className="flex gap-3 text-[11px] text-brand-muted/50">
+                  <span><span className="font-semibold text-brand-muted">{Math.round(n.calories)}</span> cal</span>
+                  <span><span className="font-semibold text-brand-muted">{Math.round(n.protein)}g</span> pro</span>
+                  <span><span className="font-semibold text-brand-muted">{Math.round(n.carbs)}g</span> carb</span>
+                  <span><span className="font-semibold text-brand-muted">{Math.round(n.fat)}g</span> fat</span>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-3 border-t border-brand-muted/10 shrink-0">
+        <button onClick={() => onNavigate('meals')} className="text-xs text-brand-muted/50 hover:text-brand-muted transition-colors">View all in Ready →</button>
+      </div>
     </div>
   );
 }
 
 // ── Desktop weekly grid ───────────────────────────────────────
-function DesktopWeeklyGrid({ weekDates }: { weekDates: string[] }) {
-  const scheduledMeals    = useAppStore((s) => s.scheduledMeals);
-  const preparedMeals     = useAppStore((s) => s.preparedMeals);
-  const eatenScheduledIds = useAppStore((s) => s.eatenScheduledIds);
+function DesktopWeeklyGrid({
+  weekDates,
+  sidebarTarget,
+  onSlotClick,
+}: {
+  weekDates: string[];
+  sidebarTarget: { date: string; mealTime: MealTime } | null;
+  onSlotClick: (date: string, mealTime: MealTime) => void;
+}) {
+  const scheduledMeals     = useAppStore((s) => s.scheduledMeals);
+  const preparedMeals      = useAppStore((s) => s.preparedMeals);
+  const eatenScheduledIds  = useAppStore((s) => s.eatenScheduledIds);
   const getFreshnessStatus = useAppStore((s) => s.getFreshnessStatus);
-  const [assignTarget, setAssignTarget] = useState<{ date: string; mealTime: MealTime } | null>(null);
   const today = format(new Date());
 
   return (
-    <div>
-      <div className="lg:grid lg:grid-cols-7 lg:gap-2">
-        {weekDates.map((date) => {
-          const isToday = date === today;
-          const dayCalories = MEAL_TIMES.reduce((sum, mt) => {
-            const s = scheduledMeals.find(s => s.date === date && s.mealTime === mt);
-            const m = s ? preparedMeals.find(m => m.id === s.preparedMealId) : undefined;
-            return sum + (m?.nutrientsPerServing?.calories ?? 0);
-          }, 0);
+    <div className="grid grid-cols-7 gap-2">
+      {weekDates.map((date) => {
+        const isToday = date === today;
 
-          return (
-            <div
-              key={date}
-              className={`rounded-xl border overflow-hidden ${
-                isToday
-                  ? 'border-brand-accent bg-brand-accent/5'
-                  : 'border-brand-muted/10 bg-brand-surface'
-              }`}
-            >
-              {/* Day header */}
-              <div className={`px-2 pt-2.5 pb-1.5 ${isToday ? 'bg-brand-accent/10' : 'bg-brand-raised/40'}`}>
-                <p className={`text-[11px] font-semibold uppercase tracking-wide ${isToday ? 'text-brand-accent' : 'text-brand-muted/50'}`}>
-                  {getDayLabel(date)}
-                </p>
-                <p className={`text-xs font-medium ${isToday ? 'text-brand-accent/80' : 'text-brand-muted/40'}`}>
-                  {parseISO(date).getDate()}
-                </p>
-                {dayCalories > 0 && (
-                  <p className="text-[10px] text-brand-accent/70 mt-0.5">{Math.round(dayCalories)}</p>
-                )}
-              </div>
+        // Day totals
+        const dayMacros = MEAL_TIMES.reduce((acc, mt) => {
+          const s = scheduledMeals.find(s => s.date === date && s.mealTime === mt);
+          const m = s ? preparedMeals.find(m => m.id === s.preparedMealId) : undefined;
+          const n = m?.nutrientsPerServing;
+          if (!n) return acc;
+          return { cal: acc.cal + n.calories, pro: acc.pro + n.protein, carb: acc.carb + n.carbs, fat: acc.fat + n.fat };
+        }, { cal: 0, pro: 0, carb: 0, fat: 0 });
+        const hasDayMacros = dayMacros.cal > 0;
 
-              {/* Meal slots */}
-              <div className="p-1.5 space-y-1">
-                {MEAL_TIMES.map((mealTime) => {
-                  const scheduled = scheduledMeals.find(s => s.date === date && s.mealTime === mealTime);
-                  const meal = scheduled ? preparedMeals.find(m => m.id === scheduled.preparedMealId) : undefined;
-                  const isEaten = scheduled ? eatenScheduledIds.includes(scheduled.id) : false;
-                  const freshness = meal ? getFreshnessStatus(meal) : 'fresh';
-                  const isExpiring = freshness === 'expiring' || freshness === 'expired';
-
-                  if (meal && scheduled) {
-                    return (
-                      <div
-                        key={mealTime}
-                        className={`px-1.5 py-1.5 rounded-lg border text-left w-full ${
-                          isExpiring
-                            ? 'border-amber-600/50 bg-amber-900/10'
-                            : 'border-brand-muted/10 bg-brand-bg/60'
-                        }`}
-                      >
-                        <p className="text-[10px] text-brand-muted/40 uppercase leading-none mb-0.5">
-                          {MEAL_TIME_LABELS[mealTime].slice(0, 4)}
-                        </p>
-                        <p className="text-[11px] font-medium text-brand-muted leading-tight truncate">
-                          {meal.recipeName}
-                        </p>
-                        {meal.nutrientsPerServing && (
-                          <p className="text-[10px] text-brand-muted/40 mt-0.5">
-                            {Math.round(meal.nutrientsPerServing.calories)} cal
-                          </p>
-                        )}
-                        <div className="flex items-center gap-1 mt-0.5">
-                          {isEaten && (
-                            <span className="text-[10px] text-brand-accent/80 font-medium">✓</span>
-                          )}
-                          {isExpiring && (
-                            <span className="text-[10px] text-amber-400 font-medium">!</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <button
-                      key={mealTime}
-                      onClick={() => setAssignTarget({ date, mealTime })}
-                      className="w-full px-1.5 py-1.5 rounded-lg border border-dashed border-brand-muted/15 hover:border-brand-accent/40 hover:bg-brand-accent/5 transition-colors text-left"
-                    >
-                      <p className="text-[10px] text-brand-muted/25 hover:text-brand-accent/50 transition-colors">
-                        + {MEAL_TIME_LABELS[mealTime].slice(0, 4)}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
+        return (
+          <div
+            key={date}
+            className={`rounded-xl border flex flex-col overflow-hidden ${
+              isToday ? 'border-brand-accent bg-brand-accent/5' : 'border-brand-muted/10 bg-brand-surface'
+            }`}
+          >
+            {/* Day header — name + date on one line */}
+            <div className={`px-2.5 pt-2.5 pb-2 shrink-0 ${isToday ? 'bg-brand-accent/10' : 'bg-brand-raised/40'}`}>
+              <p className={`text-xs font-semibold ${isToday ? 'text-brand-accent' : 'text-brand-muted/70'}`}>
+                {getDayLabel(date)} {parseISO(date).getDate()}
+              </p>
+              {hasDayMacros ? (
+                <div className="flex flex-wrap gap-x-2 mt-1">
+                  <span className="text-[10px] text-brand-accent/80 font-medium">{Math.round(dayMacros.cal)} cal</span>
+                  <span className="text-[10px] text-brand-muted/40">{Math.round(dayMacros.pro)}g pro</span>
+                  <span className="text-[10px] text-brand-muted/40">{Math.round(dayMacros.carb)}g carb</span>
+                  <span className="text-[10px] text-brand-muted/40">{Math.round(dayMacros.fat)}g fat</span>
+                </div>
+              ) : (
+                <p className="text-[10px] text-brand-muted/25 mt-1">No meals</p>
+              )}
             </div>
-          );
-        })}
-      </div>
 
-      {assignTarget && (
-        <AssignModal
-          date={assignTarget.date}
-          mealTime={assignTarget.mealTime}
-          onClose={() => setAssignTarget(null)}
-        />
-      )}
+            {/* Meal slots */}
+            <div className="p-1.5 space-y-1 flex-1">
+              {MEAL_TIMES.map((mealTime) => {
+                const scheduled = scheduledMeals.find(s => s.date === date && s.mealTime === mealTime);
+                const meal      = scheduled ? preparedMeals.find(m => m.id === scheduled.preparedMealId) : undefined;
+                const isEaten   = scheduled ? eatenScheduledIds.includes(scheduled.id) : false;
+                const freshness = meal ? getFreshnessStatus(meal) : 'fresh';
+                const isExpiring = freshness === 'expiring' || freshness === 'expired';
+                const isTarget   = sidebarTarget?.date === date && sidebarTarget?.mealTime === mealTime;
+                const n          = meal?.nutrientsPerServing;
+
+                if (meal && scheduled) {
+                  return (
+                    <div
+                      key={mealTime}
+                      className={`px-2 py-2 rounded-lg border ${
+                        isTarget
+                          ? 'border-brand-accent bg-brand-accent/10'
+                          : isExpiring
+                          ? 'border-amber-600/50 bg-amber-900/10'
+                          : 'border-brand-muted/10 bg-brand-bg/60'
+                      }`}
+                    >
+                      <p className="text-[10px] text-brand-muted/40 uppercase tracking-wide leading-none mb-1">
+                        {MEAL_TIME_LABELS[mealTime]}
+                      </p>
+                      <p className="text-[12px] font-semibold text-brand-muted leading-tight">
+                        {meal.recipeName}
+                      </p>
+                      {meal.variantName && meal.variantName !== meal.recipeName && (
+                        <p className="text-[10px] text-brand-muted/50 mt-0.5">{meal.variantName}</p>
+                      )}
+                      {n && (
+                        <div className="flex flex-wrap gap-x-2 mt-1.5 text-[10px] text-brand-muted/45">
+                          <span className="font-medium text-brand-muted/70">{Math.round(n.calories)} cal</span>
+                          <span>{Math.round(n.protein)}g pro</span>
+                          <span>{Math.round(n.carbs)}g carb</span>
+                          <span>{Math.round(n.fat)}g fat</span>
+                        </div>
+                      )}
+                      {(isEaten || isExpiring) && (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          {isEaten    && <span className="text-[10px] text-brand-accent/80 font-medium">✓ Eaten</span>}
+                          {isExpiring && <span className="text-[10px] text-amber-400 font-medium">! Expiring</span>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    key={mealTime}
+                    onClick={() => onSlotClick(date, mealTime)}
+                    className={`w-full px-2 py-2 rounded-lg border border-dashed transition-colors text-left ${
+                      isTarget
+                        ? 'border-brand-accent bg-brand-accent/10'
+                        : 'border-brand-muted/15 hover:border-brand-accent/40 hover:bg-brand-accent/5'
+                    }`}
+                  >
+                    <p className="text-[10px] text-brand-muted/40 uppercase tracking-wide leading-none mb-1">
+                      {MEAL_TIME_LABELS[mealTime]}
+                    </p>
+                    <p className={`text-[11px] transition-colors ${isTarget ? 'text-brand-accent font-medium' : 'text-brand-muted/25'}`}>
+                      {isTarget ? 'Select from inventory →' : '+ Add meal'}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -889,6 +931,18 @@ export default function ScheduleScreen({ onNavigate }: { onNavigate: (tab: strin
   const setSubTab = useAppStore((s) => s.setCalendarSubTab);
   const [desktopView, setDesktopView] = useState<'weekly' | 'daily'>('weekly');
   const [weekOffset, setWeekOffset] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarTarget, setSidebarTarget] = useState<{ date: string; mealTime: MealTime } | null>(null);
+
+  function handleSlotClick(date: string, mealTime: MealTime) {
+    setSidebarTarget({ date, mealTime });
+    setSidebarOpen(true);
+  }
+
+  function handleSidebarClose() {
+    setSidebarOpen(false);
+    setSidebarTarget(null);
+  }
 
   const preparedMeals = useAppStore((s) => s.preparedMeals);
   const userPrefs     = useAppStore((s) => s.userPrefs);
@@ -909,80 +963,56 @@ export default function ScheduleScreen({ onNavigate }: { onNavigate: (tab: strin
     : null;
 
   return (
-    <div className="lg:grid lg:grid-cols-[1fr_312px] lg:gap-10 lg:items-start">
-      {/* Left column: schedule content */}
-      <div>
-        {/* ── Mobile tab toggle (unchanged) ───────────────────── */}
-        <div className="flex lg:hidden bg-brand-surface rounded-lg border border-brand-muted/15 p-1 mb-5">
-          <button
-            onClick={() => setSubTab('daily')}
-            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${subTab === 'daily' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'}`}
-          >
-            Daily
-          </button>
-          <button
-            onClick={() => setSubTab('weekly')}
-            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${subTab === 'weekly' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'}`}
-          >
-            Weekly
-          </button>
-        </div>
+    <div>
+      {/* ── Mobile tab toggle ───────────────────────────────────── */}
+      <div className="flex lg:hidden bg-brand-surface rounded-lg border border-brand-muted/15 p-1 mb-5">
+        <button onClick={() => setSubTab('daily')} className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${subTab === 'daily' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50'}`}>Daily</button>
+        <button onClick={() => setSubTab('weekly')} className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${subTab === 'weekly' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50'}`}>Weekly</button>
+      </div>
 
-        {/* ── Mobile content (unchanged) ──────────────────────── */}
-        <div className="lg:hidden">
-          {subTab === 'daily' && <DailyView onNavigate={onNavigate} />}
-          {subTab === 'weekly' && <WeeklyView />}
-        </div>
+      {/* ── Mobile content ──────────────────────────────────────── */}
+      <div className="lg:hidden">
+        {subTab === 'daily' && <DailyView onNavigate={onNavigate} />}
+        {subTab === 'weekly' && <WeeklyView />}
+      </div>
 
-        {/* ── Desktop calendar header ──────────────────────────── */}
-        <div className="hidden lg:block mb-5">
-          <p className="text-[11px] font-semibold text-brand-accent/80 uppercase tracking-widest mb-1">
-            Schedule
-          </p>
+      {/* ── Desktop ─────────────────────────────────────────────── */}
+      <div className="hidden lg:block">
+        {/* Desktop header */}
+        <div className="mb-5">
+          <p className="text-[11px] font-semibold text-brand-accent/80 uppercase tracking-widest mb-1">Schedule</p>
           <div className="flex items-center justify-between gap-4 mb-1.5">
-            {/* Week title + navigation (#22) */}
+            {/* Week title + nav */}
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-semibold text-brand-muted">
                 {formatDisplay(monday)} – {formatDisplay(sunday)}
               </h1>
               <div className="flex items-center gap-1 ml-2">
-                <button
-                  onClick={() => setWeekOffset(w => w - 1)}
-                  className="w-7 h-7 rounded-md border border-brand-muted/15 text-brand-muted/50 hover:text-brand-muted hover:border-brand-muted/30 transition-colors flex items-center justify-center text-sm"
-                  aria-label="Previous week"
-                >‹</button>
+                <button onClick={() => setWeekOffset(w => w - 1)} className="w-7 h-7 rounded-md border border-brand-muted/15 text-brand-muted/50 hover:text-brand-muted hover:border-brand-muted/30 transition-colors flex items-center justify-center text-sm">‹</button>
                 {weekOffset !== 0 && (
-                  <button
-                    onClick={() => setWeekOffset(0)}
-                    className="px-2 py-0.5 rounded text-xs text-brand-accent border border-brand-accent/30 hover:bg-brand-accent/10 transition-colors"
-                  >
-                    Today
-                  </button>
+                  <button onClick={() => setWeekOffset(0)} className="px-2 py-0.5 rounded text-xs text-brand-accent border border-brand-accent/30 hover:bg-brand-accent/10 transition-colors">Today</button>
                 )}
-                <button
-                  onClick={() => setWeekOffset(w => w + 1)}
-                  className="w-7 h-7 rounded-md border border-brand-muted/15 text-brand-muted/50 hover:text-brand-muted hover:border-brand-muted/30 transition-colors flex items-center justify-center text-sm"
-                  aria-label="Next week"
-                >›</button>
+                <button onClick={() => setWeekOffset(w => w + 1)} className="w-7 h-7 rounded-md border border-brand-muted/15 text-brand-muted/50 hover:text-brand-muted hover:border-brand-muted/30 transition-colors flex items-center justify-center text-sm">›</button>
               </div>
             </div>
-            {/* Daily/Weekly segmented toggle */}
-            <div className="flex bg-brand-surface rounded-lg border border-brand-muted/15 p-0.5 shrink-0">
+            {/* Right controls: Weekly/Daily + inventory toggle */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex bg-brand-surface rounded-lg border border-brand-muted/15 p-0.5">
+                <button onClick={() => setDesktopView('weekly')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${desktopView === 'weekly' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'}`}>Weekly</button>
+                <button onClick={() => setDesktopView('daily')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${desktopView === 'daily' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'}`}>Daily</button>
+              </div>
               <button
-                onClick={() => setDesktopView('weekly')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${desktopView === 'weekly' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'}`}
+                onClick={() => sidebarOpen ? handleSidebarClose() : setSidebarOpen(true)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                  sidebarOpen
+                    ? 'bg-brand-accent text-white border-brand-accent'
+                    : 'bg-brand-surface border-brand-muted/15 text-brand-muted/60 hover:text-brand-muted hover:border-brand-muted/30'
+                }`}
               >
-                Weekly
-              </button>
-              <button
-                onClick={() => setDesktopView('daily')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${desktopView === 'daily' ? 'bg-brand-raised text-brand-muted' : 'text-brand-muted/50 hover:text-brand-muted/70'}`}
-              >
-                Daily
+                {sidebarOpen ? 'Hide inventory' : 'Show inventory'}
               </button>
             </div>
           </div>
-          {/* Inventory coverage line (#24) */}
           {available > 0 && (
             <p className="text-xs text-brand-muted/50">
               <span className="text-brand-accent font-medium">{available} meal{available !== 1 ? 's' : ''} ready</span>
@@ -991,26 +1021,36 @@ export default function ScheduleScreen({ onNavigate }: { onNavigate: (tab: strin
           )}
         </div>
 
-        {/* ── Desktop: weekly 7-column grid ───────────────────── */}
-        {desktopView === 'weekly' && (
-          <div className="hidden lg:block">
-            <DesktopWeeklyGrid weekDates={desktopWeekDates} />
-            <DesktopWeekStrip />
+        {/* Desktop body: grid + optional sidebar */}
+        <div className={`flex gap-4 items-start`}>
+          {/* Schedule content — expands to fill when sidebar is closed */}
+          <div className="flex-1 min-w-0">
+            {desktopView === 'weekly' && (
+              <>
+                <DesktopWeeklyGrid
+                  weekDates={desktopWeekDates}
+                  sidebarTarget={sidebarTarget}
+                  onSlotClick={handleSlotClick}
+                />
+                <DesktopWeekStrip />
+              </>
+            )}
+            {desktopView === 'daily' && <DailyView onNavigate={onNavigate} />}
           </div>
-        )}
 
-        {/* ── Desktop: daily view ──────────────────────────────── */}
-        {desktopView === 'daily' && (
-          <div className="hidden lg:block">
-            <DailyView onNavigate={onNavigate} />
-          </div>
-        )}
-
-        {/* Hide This Week + Momentum sections on desktop (shown in week strip) */}
+          {/* Inventory sidebar — slides in/out */}
+          {sidebarOpen && (
+            <div className="w-[300px] shrink-0 sticky top-6 rounded-xl border border-brand-muted/15 overflow-hidden bg-brand-surface" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+              <InventorySidebar
+                target={sidebarTarget}
+                onClose={handleSidebarClose}
+                onNavigate={onNavigate}
+                onAssigned={() => setSidebarTarget(null)}
+              />
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* Right column: desktop-only rails */}
-      <DesktopInventoryRail onNavigate={onNavigate} />
     </div>
   );
 }
